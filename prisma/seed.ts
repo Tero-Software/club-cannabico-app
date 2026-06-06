@@ -15,13 +15,11 @@ async function main() {
     "postulaciones:manage",
     "admins:manage",
     "estadisticas:view",
-    "blog:moderate",
   ];
 
-  const OWNER_EMAIL = "zoncabe@clubcannabico.app";
+  const OWNER_EMAIL = "admin@clubcannabico.app";
   const admins: { email: string; name: string; password: string }[] = [
-    { email: "jacobo@clubcannabico.app", name: "Jacobo", password: "1813" },
-    { email: OWNER_EMAIL, name: "Zoncabe", password: "Campeon2122!" },
+    { email: OWNER_EMAIL, name: "Admin", password: "Demo2026!" },
   ];
 
   for (const a of admins) {
@@ -29,7 +27,13 @@ async function main() {
     const isOwner = a.email === OWNER_EMAIL;
     await prisma.user.upsert({
       where: { email: a.email },
-      update: { permissions: allPermissions, role: "ADMIN", active: true, isOwner },
+      update: {
+        permissions: allPermissions,
+        role: "ADMIN",
+        active: true,
+        isOwner,
+        mustChangePassword: false,
+      },
       create: {
         email: a.email,
         name: a.name,
@@ -37,11 +41,10 @@ async function main() {
         role: "ADMIN",
         permissions: allPermissions,
         isOwner,
+        mustChangePassword: false,
       },
     });
   }
-
-  await prisma.user.deleteMany({ where: { email: "admin@clubcannabico.app" } });
 
   const geneticasCount = await prisma.strain.count();
   if (geneticasCount === 0) {
