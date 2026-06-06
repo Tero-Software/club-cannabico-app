@@ -1,0 +1,243 @@
+// El Gordito Club - Prisma Schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  VISITANTE
+
+  @@map("Role")
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+
+  @@map("EstadoRetiro")
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("EstadoPostulacion")
+}
+
+enum MovementType {
+  IN
+  OUT
+}
+
+model User {
+  id                 String    @id @default(cuid())
+  email              String    @unique
+  passwordHash       String
+  name               String
+  phone              String?
+  role               Role      @default(MEMBER)
+  permissions        String[]  @default([])
+  active             Boolean   @default(true)
+  isOwner            Boolean   @default(false)
+  mustChangePassword Boolean   @default(false)
+  totpSecret         String?
+  totpEnabled        Boolean   @default(false)
+  failedLoginCount   Int       @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  expiresAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  withdrawals        Withdrawal[]
+  auditLogs          AuditLog[]
+  visitorInvites     VisitorInvite[]
+
+  @@index([email])
+}
+
+model VisitorInvite {
+  id         String    @id @default(cuid())
+  token      String    @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdBy  String
+  createdAt  DateTime  @default(now())
+
+  @@index([expiresAt])
+  @@map("InvitacionVisitante")
+}
+
+model LoginAttempt {
+  id        String   @id @default(cuid())
+  email     String
+  ip        String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+  @@index([ip, createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actorEmail String?
+  action     String
+  entity     String?
+  entityId   String?
+  metadata   Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+}
+
+model Strain {
+  id             String          @id @default(cuid())
+  code           String?         @unique
+  name           String
+  bank           String?
+  description    String?
+  photos         String[]        @default([])
+  sourceUrl      String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  withdrawalItems WithdrawalItem[]
+  containerItems ContainerItem[]
+
+  @@map("Genetica")
+}
+
+model Withdrawal {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime         @map("fecha")
+  timeSlot  String           @map("horario")
+  status    WithdrawalStatus @default(PENDING) @map("estado")
+  notes     String?          @map("notas")
+  items     WithdrawalItem[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([date])
+  @@index([status])
+  @@map("Retiro")
+}
+
+model WithdrawalItem {
+  id         String     @id @default(cuid())
+  withdrawalId String   @map("retiroId")
+  withdrawal Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+  strainId   String     @map("geneticaId")
+  strain     Strain     @relation(fields: [strainId], references: [id])
+  amount     Float      @map("cantidad")
+  movements  Movement[]
+  reservations Reservation[]
+
+  @@index([withdrawalId])
+  @@index([strainId])
+  @@map("RetiroItem")
+}
+
+model Reservation {
+  id               String         @id @default(cuid())
+  containerItemId  String
+  containerItem    ContainerItem  @relation(fields: [containerItemId], references: [id], onDelete: Cascade)
+  withdrawalItemId String
+  withdrawalItem   WithdrawalItem @relation(fields: [withdrawalItemId], references: [id], onDelete: Cascade)
+  amount           Float
+  createdAt        DateTime       @default(now())
+
+  @@index([containerItemId])
+  @@index([withdrawalItemId])
+}
+
+model Container {
+  id        String          @id @default(cuid())
+  number    Int             @unique
+  notes     String?
+  active    Boolean         @default(false)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  items     ContainerItem[]
+}
+
+model ContainerItem {
+  id            String     @id @default(cuid())
+  containerId   String
+  container     Container  @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  strainId      String?
+  strain        Strain?    @relation(fields: [strainId], references: [id])
+  plantNumber   String?
+  initialWeight Float
+  currentWeight Float
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  movements     Movement[]
+  reservations  Reservation[]
+
+  @@index([containerId])
+  @@index([strainId])
+}
+
+model Movement {
+  id              String        @id @default(cuid())
+  containerItemId String
+  containerItem   ContainerItem @relation(fields: [containerItemId], references: [id], onDelete: Cascade)
+  type            MovementType
+  amount          Float
+  withdrawalItemId String?
+  withdrawalItem  WithdrawalItem? @relation(fields: [withdrawalItemId], references: [id])
+  notes           String?
+  createdAt       DateTime      @default(now())
+
+  @@index([containerItemId, createdAt])
+  @@index([withdrawalItemId])
+}
+
+model ClubConfig {
+  id                   String   @id @default("singleton")
+  workingDays          Int[]    @default([1, 2, 3, 4, 5])
+  timeSlots            String[] @default(["18:00-19:00", "19:00-20:00"])
+  maxGramsPerMonth     Int      @default(40)
+  minGramsPerWithdrawal Int     @default(20)
+  minGramsPerStrain    Int      @default(10)
+  gramsStep            Int      @default(10)
+  updatedAt            DateTime @updatedAt
+}
+
+model Application {
+  id         String            @id @default(cuid())
+  name       String            @map("nombre")
+  email      String
+  phone      String?           @map("telefono")
+  message    String?           @map("mensaje")
+  status     ApplicationStatus @default(PENDING) @map("estado")
+  adminNotes String?           @map("notasAdmin")
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@map("Postulacion")
+}

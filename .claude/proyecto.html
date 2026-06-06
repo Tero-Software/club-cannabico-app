@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="es-UY">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proyecto — Gestor de Clubes Cannábicos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Spectral:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0c0d0a;
+  --bg-panel: #14161a;
+  --bg-panel-2: #1a1d1f;
+  --text: #e8e2d6;
+  --text-soft: #b8b1a2;
+  --text-muted: #7a766c;
+  --gold: #b8915c;
+  --sage: #8aa67f;
+  --red: #c97162;
+  --border: #2a2d28;
+  --border-soft: #1f211e;
+  --serif: 'Spectral', Georgia, serif;
+  --display: 'Cormorant Garamond', Georgia, serif;
+  --ui: 'Manrope', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-image:
+    radial-gradient(ellipse 70% 50% at 10% 0%, rgba(184,145,92,0.05), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, rgba(138,166,127,0.03), transparent 60%);
+  min-height: 100vh;
+  padding: 60px 24px 120px;
+}
+
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* HEADER */
+.masthead {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 28px 0 32px;
+  margin-bottom: 48px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.masthead .left .eyebrow {
+  font-family: var(--ui);
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+.masthead h1 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 48px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.masthead h1 .italics {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--text-soft);
+}
+.masthead .right {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: right;
+  line-height: 1.9;
+}
+.masthead .right .label { color: var(--text-muted); }
+.masthead .right .val { color: var(--text-soft); }
+
+/* TL;DR */
+.tldr {
+  background: linear-gradient(180deg, rgba(184,145,92,0.04), transparent);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--gold);
+  padding: 26px 32px;
+  margin-bottom: 56px;
+}
+.tldr .label {
+  font-family: var(--ui);
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+.tldr p {
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.7;
+  color: var(--text-soft);
+  font-style: italic;
+}
+
+/* SECTION */
+section {
+  margin-bottom: 64px;
+}
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  margin-bottom: 28px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.section-head .num {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--gold);
+  font-weight: 500;
+}
+.section-head h2 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.section-head .meta {
+  margin-left: auto;
+  font-family: var(--ui);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* PROSE */
+.prose p {
+  margin-bottom: 14px;
+  color: var(--text-soft);
+  font-size: 16px;
+}
+.prose p strong { color: var(--text); font-weight: 500; }
+.prose ul {
+  list-style: none;
+  margin: 12px 0 18px;
+}
+.prose li {
+  position: relative;
+  padding: 6px 0 6px 22px;
+  color: var(--text-soft);
+}
+.prose li::before {
+  content: '·';
+  position: absolute;
+  left: 8px;
+  color: var(--gold);
+  font-weight: 700;
+}
+.prose li strong { color: var(--text); font-weight: 500; }
+.prose code, code {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--sage);
+  background: var(--bg-panel);
+  padding: 1px 6px;
+  border-radius: 2px;
+  border: 1px solid var(--border-soft);
+}
+
+/* CARDS GRID */
+.cards { display: grid; gap: 16px; margin-top: 20px; }
+.cards.two { grid-template-columns: 1fr 1fr; }
+@media (max-width: 720px) {
+  .cards.two { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 22px 24px;
+  position: relative;
+}
+.card.threat-low::before,
+.card.threat-medium::before,
+.card.threat-high::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 2px;
+}
+.card.threat-low::before { background: var(--sage); }
+.card.threat-medium::before { background: var(--gold); }
+.card.threat-high::before { background: var(--red); }
+
+.card h3 {
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.005em;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+.card .subtitle {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+  letter-spacing: 0.04em;
+}
+.card .threat-tag {
+  display: inline-block;
+  font-family: var(--ui);
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+.card.threat-low .threat-tag { color: var(--sage); border-color: var(--sage); }
+.card.threat-medium .threat-tag { color: var(--gold); border-color: var(--gold); }
+.card.threat-high .threat-tag { color: var(--red); border-color: var(--red); }
+
+.card .row {
+  display: flex;
+  font-size: 14px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border-soft);
+}
+.card .row:first-of-type { border-top: none; }
+.card .row .k {
+  font-family: var(--ui);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  min-width: 90px;
+  padding-top: 3px;
+  font-weight: 600;
+}
+.card .row .v {
+  font-family: var(--serif);
+  color: var(--text-soft);
+  flex: 1;
+  font-size: 14px;
+}
+.card .row .v.mono { font-family: var(--mono); font-size: 12px; }
+
+/* TABLE */
+.table-wrap {
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--serif);
+  font-size: 14px;
+}
+thead {
+  background: var(--bg-panel);
+}
+th {
+  font-family: var(--ui);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-align: left;
+  padding: 14px 16px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 14px 16px;
+  color: var(--text-soft);
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+td.mono { font-family: var(--mono); font-size: 12px; }
+.dom { font-family: var(--mono); font-size: 13px; color: var(--text); }
+.status {
+  display: inline-block;
+  font-family: var(--ui);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+.status.libre { background: rgba(138,166,127,0.12); color: var(--sage); }
+.status.tomado { background: rgba(201,113,98,0.1); color: var(--red); }
+.status.propio { background: rgba(184,145,92,0.12); color: var(--gold); }
+.status.negociando { background: rgba(184,145,92,0.18); color: var(--gold); border: 1px dashed var(--gold); }
+
+/* CALLOUT */
+.callout {
+  background: var(--bg-panel);
+  border-left: 2px solid var(--sage);
+  padding: 18px 22px;
+  margin: 20px 0;
+  font-family: var(--serif);
+  font-style: italic;
+  color: var(--text-soft);
+  font-size: 15px;
+}
+.callout.warn { border-left-color: var(--red); }
+.callout.note { border-left-color: var(--gold); }
+
+/* TIMELINE */
+.timeline {
+  position: relative;
+  padding-left: 24px;
+  margin-top: 16px;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 1px;
+  background: var(--border);
+}
+.timeline .ev {
+  position: relative;
+  padding: 8px 0 8px 20px;
+}
+.timeline .ev::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1px solid var(--gold);
+}
+.timeline .ev.done::before { background: var(--gold); }
+.timeline .ev.active::before { background: var(--bg); border-color: var(--sage); box-shadow: 0 0 0 3px rgba(138,166,127,0.2); }
+.timeline .ev.pending::before { background: var(--bg); border-color: var(--text-muted); }
+
+.timeline .ev .date {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+.timeline .ev .what {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+.timeline .ev.done .what { color: var(--text); }
+.timeline .ev .tag {
+  font-family: var(--ui);
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-left: 8px;
+}
+.timeline .ev.done .tag { color: var(--gold); }
+.timeline .ev.active .tag { color: var(--sage); }
+.timeline .ev.pending .tag { color: var(--text-muted); }
+
+/* PRICING */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 20px;
+}
+@media (max-width: 720px) { .pricing-grid { grid-template-columns: 1fr 1fr; } }
+.tier {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  padding: 20px 16px;
+  text-align: center;
+}
+.tier .name {
+  font-family: var(--ui);
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.tier .price {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+.tier .price small { font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+.tier .desc {
+  font-family: var(--serif);
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* TWO-COL TEXT */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 16px;
+}
+@media (max-width: 720px) { .two-col { grid-template-columns: 1fr; gap: 20px; } }
+.two-col h4 {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.two-col h4::before {
+  content: '— ';
+  color: var(--gold);
+}
+
+/* FOOTER */
+footer {
+  margin-top: 80px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+  font-family: var(--ui);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+footer .gold { color: var(--gold); }
+
+/* HIGHLIGHT */
+.hl { color: var(--gold); }
+.hl-sage { color: var(--sage); }
+.hl-red { color: var(--red); }
+
+/* BIG NUM */
+.big-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin: 20px 0;
+}
+@media (max-width: 720px) { .big-stats { grid-template-columns: 1fr 1fr; } }
+.stat {
+  padding: 18px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+}
+.stat .n {
+  font-family: var(--display);
+  font-size: 36px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.stat .l {
+  font-family: var(--ui);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+/* Drop cap on first paragraph of each section */
+.drop p:first-of-type::first-letter {
+  font-family: var(--display);
+  font-size: 56px;
+  float: left;
+  line-height: 0.95;
+  padding: 6px 10px 0 0;
+  color: var(--gold);
+  font-weight: 500;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+section, .masthead, .tldr { animation: fadeUp 0.6s ease-out both; }
+section:nth-child(2) { animation-delay: 0.08s; }
+section:nth-child(3) { animation-delay: 0.16s; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="masthead">
+  <div class="left">
+    <div class="eyebrow">Dossier interno · Proyecto en marcha</div>
+    <h1>Gestor de Clubes Cannábicos<br><span class="italics">por Tero Software</span></h1>
+  </div>
+  <div class="right">
+    <div><span class="label">Versión:</span> <span class="val">1.0</span></div>
+    <div><span class="label">Fecha:</span> <span class="val">20·05·2026</span></div>
+    <div><span class="label">Operador:</span> <span class="val">Mariano Álvarez</span></div>
+    <div><span class="label">Estado:</span> <span class="val">en construcción</span></div>
+  </div>
+</header>
+
+<div class="tldr">
+  <div class="label">Resumen</div>
+  <p>Tero Software ofrece un sistema de gestión para clubes cannábicos habilitados por IRCCA en Uruguay. El Gordito Club opera como primer cliente y caso de éxito en producción. La estrategia es accesibilidad de precio (USD 19–49/mes) para capturar 200 de los ~570 clubes habilitados antes de que cannabis.uy y clubcannabico.uy salgan a mercado. Separación legal limpia entre la empresa de software y el club operativo, para evitar el art. 12 de la Ley 19.172.</p>
+</div>
+
+<section>
+  <div class="section-head">
+    <div class="num">01</div>
+    <h2>Operador y empresas</h2>
+    <div class="meta">Estructura</div>
+  </div>
+  <div class="cards two">
+    <div class="card">
+      <h3>Tero Software</h3>
+      <div class="subtitle">terosoftware.uy · Empresa de software</div>
+      <div class="row"><div class="k">Rol</div><div class="v">Vehículo comercial. Vende y factura el gestor.</div></div>
+      <div class="row"><div class="k">Stack</div><div class="v">Vercel + Next.js</div></div>
+      <div class="row"><div class="k">Activos</div><div class="v">Landing pública, posicionamiento como dev shop con IA</div></div>
+    </div>
+    <div class="card">
+      <h3>El Gordito Club</h3>
+      <div class="subtitle">elgordito.club · Asociación civil</div>
+      <div class="row"><div class="k">Habilitación</div><div class="v">IRCCA · Resolución DE-127/2022</div></div>
+      <div class="row"><div class="k">Sede</div><div class="v">Canelones, Uruguay</div></div>
+      <div class="row"><div class="k">Rol</div><div class="v">Primer cliente del gestor. Caso de éxito en producción.</div></div>
+    </div>
+  </div>
+  <div class="callout note">
+    La separación entre Tero (software) y El Gordito (asociación civil habilitada) protege a ambos del riesgo de "publicidad indirecta" del art. 12 de la Ley 19.172. Tero vende software, no promueve consumo.
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="num">02</div>
+    <h2>Producto</h2>
+    <div class="meta">Estado actual</div>
+  </div>
+  <div class="prose">
+    <p>Sistema web de gestión para administrar la operación interna de un club cannábico habilitado. Stack: <code>Next.js + Tailwind + Geist</code> con tema oscuro por defecto. Una instancia desplegada en producción para El Gordito Club. <strong>Arquitectura: single-tenant</strong>. No multi-tenant todavía.</p>
+  </div>
+  <div class="two-col">
+    <div>
+      <h4>Features implementadas</h4>
+      <div class="prose">
+        <ul>
+          <li>Autenticación de socios y admins</li>
+          <li>Panel con stats, alertas de inactividad, actividad mensual</li>
+          <li>Gestión de socios (CI, edad, ingreso, g/mes, $/mes)</li>
+          <li>Registro de retiros</li>
+          <li>Catálogo de variedades</li>
+          <li>Infográficos / charts</li>
+          <li>Podio Top 10 socios por consumo anual</li>
+          <li>Log de auditoría</li>
+          <li>Exportación PDF</li>
+          <li>Configuración (alertas, límites, branding)</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <h4>Decisiones pendientes</h4>
+      <div class="prose">
+        <ul>
+          <li>Arquitectura: <strong>multi-tenant (shared DB)</strong> vs <strong>single-tenant containerizado</strong>. Operador prefiere lo segundo por compliance.</li>
+          <li>Refactor del repo a template parametrizado (branding, deploy script, migraciones, backups).</li>
+          <li>Nombre de producto definitivo (distinto del nombre del club).</li>
+          <li>Demo público en <code>demo.terosoftware.uy</code> con data fake.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="num">03</div>
+    <h2>Mercado y marco legal</h2>
+    <div class="meta">Uruguay</div>
+  </div>
+  <div class="big-stats">
+    <div class="stat"><div class="n">570</div><div class="l">Clubes habilitados</div></div>
+    <div class="stat"><div class="n">15–45</div><div class="l">Socios por club</div></div>
+    <div class="stat"><div class="n">480g</div><div class="l">Tope anual / socio</div></div>
+    <div class="stat"><div class="n">99</div><div class="l">Plantas máximo</div></div>
+  </div>
+  <div class="prose">
+    <p><strong>Marco regulatorio:</strong> Ley 19.172 (2013) + Decreto 120/014 + IRCCA como autoridad. <strong>Art. 12 prohíbe publicidad directa o indirecta del cannabis.</strong> Información educativa está permitida; promoción comercial no. Esta línea define todo el marketing posible.</p>
+    <p><strong>Economía del cliente típico:</strong> margen bruto por socio hasta 8.000 UYU/mes (≈ USD 200). Club con 30 socios reales factura USD 5–7K/mes bruto. El techo de poder adquisitivo para software es bajo — define el modelo de precios.</p>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="num">04</div>
+    <h2>Competidores</h2>
+    <div class="meta">Inteligencia</div>
+  </div>
+  <div class="cards two">
+    <div class="card threat-medium">
+      <h3>cannabis.uy</h3>
+      <div class="subtitle">East Coast CC · Punta del Este</div>
+      <span class="threat-tag">Threat · Medium</span>
+      <div class="row"><div class="k">Estado</div><div class="v">Gestor single-tenant en producción para 1 club (38/45 socios)</div></div>
+      <div class="row"><div class="k">Stack</div><div class="v mono">Vanilla JS · Hostinger · API REST</div></div>
+      <div class="row"><div class="k">GTM</div><div class="v">Ninguno. Sin pricing, signup, demo, contacto.</div></div>
+      <div class="row"><div class="k">Riesgo real</div><div class="v">Tiene el mejor dominio del rubro. Si lo activan como SaaS, salen con feature parity.</div></div>
+    </div>
+    <div class="card threat-medium">
+      <h3>clubcannabico.uy</h3>
+      <div class="subtitle">Agustin Solla · Mvd · "Cacumol &amp; Charly"</div>
+      <span class="threat-tag">Threat · Medium</span>
+      <div class="row"><div class="k">Titular</div><div class="v">Agustin Solla · agsollamagallanes@gmail.com · +598 91032616 · Quijote 2888</div></div>
+      <div class="row"><div class="k">Antigüedad</div><div class="v">Alta 22/12/2023 · 2 años 5 meses con el dominio</div></div>
+      <div class="row"><div class="k">Stack</div><div class="v mono">AWS US East · NS1.com · Netuy</div></div>
+      <div class="row"><div class="k">GTM</div><div class="v">"Próximamente" hace 2+ años. Stealth o abandonado.</div></div>
+      <div class="row"><div class="k">Riesgo real</div><div class="v">Persona técnica con dominio antiguo. Si activa, competidor directo.</div></div>
+    </div>
+    <div class="card threat-low">
+      <h3>CannabiSoft @ cogouy.com</h3>
+      <div class="subtitle">Cannabis Club Cogo Uy · custom interno</div>
+      <span class="threat-tag">Threat · Nulo</span>
+      <div class="row"><div class="k">Estado</div><div class="v">Software interno para un solo club. Versión 1.1.18 estancada.</div></div>
+      <div class="row"><div class="k">Stack</div><div class="v mono">jQuery + Bootstrap + PHP/Apache · ColoCrossing US</div></div>
+      <div class="row"><div class="k">GTM</div><div class="v">No comercializa. Sin GitHub, sin sitio propio, sin otros clientes.</div></div>
+      <div class="row"><div class="k">Patrón</div><div class="v">Tercer ejemplo uruguayo del mismo formato: club + tool custom + nombre genérico.</div></div>
+    </div>
+    <div class="card threat-low">
+      <h3>clubescannabicos.com</h3>
+      <div class="subtitle">Directorio internacional</div>
+      <span class="threat-tag">No es gestor</span>
+      <div class="row"><div class="k">Tipo</div><div class="v">Directorio público con páginas por club</div></div>
+      <div class="row"><div class="k">Geo</div><div class="v">Hosteado en Cloudflare, registrado fuera de Uruguay (legal hedge)</div></div>
+      <div class="row"><div class="k">Riesgo</div><div class="v">Dominante para SEO de "club cannábicos Montevideo". No compite con Tero, sí con un eventual directorio propio.</div></div>
+    </div>
+    <div class="card threat-low">
+      <h3>FeCCU · IRCCA · cannabisafterclub</h3>
+      <div class="subtitle">Institucional / no comercial</div>
+      <span class="threat-tag">Contexto</span>
+      <div class="row"><div class="k">FeCCU</div><div class="v">Federación de Clubes Cannábicos. Web caída, IG ~4K seguidores.</div></div>
+      <div class="row"><div class="k">IRCCA</div><div class="v">Gobierno. Lista oficial pública por departamento.</div></div>
+      <div class="row"><div class="k">CAC</div><div class="v">Directorio internacional. Sección Uruguay vacía.</div></div>
+    </div>
+  </div>
+
+  <div style="margin-top: 40px;">
+    <h3 style="font-family: var(--display); font-weight: 500; font-size: 24px; color: var(--text); margin-bottom: 14px;">Mercado español — competencia futura</h3>
+    <div class="prose">
+      <p>En Uruguay hay 3 builds custom single-tenant sin GTM. En España, ecosistema SaaS maduro. <strong>Cualquiera puede expandirse a Uruguay en 6–12 meses</strong>.</p>
+    </div>
+    <div class="table-wrap" style="margin-top: 16px;">
+      <table>
+        <thead>
+          <tr><th>Player</th><th>URL</th><th>Tamaño / Posición</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="dom">Easy CSC</td><td class="mono">easycsc.com</td><td>500+ clubes · 5+ años · respaldo MJ Freeway</td></tr>
+          <tr><td class="dom">Gestion Verde</td><td class="mono">softwarecannabis.es</td><td>Cloud + app móvil socios · origen Barcelona</td></tr>
+          <tr><td class="dom">Cannabis Club Systems</td><td class="mono">cannabisclub.systems</td><td>Desde 2014 · 11 países · 4 continentes</td></tr>
+          <tr><td class="dom">IndicaOnline</td><td class="mono">indicaonline.com</td><td>POS dispensarios/asociaciones</td></tr>
+          <tr><td class="dom">CannaVerse</td><td class="mono">cannaverse.cloud</td><td>All-in-one CSC</td></tr>
+          <tr><td class="dom">Cannabees</td><td class="mono">cannabees.cloud</td><td>All-in-one CSC (alemán/europeo)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout warn">
+      El competidor real no está en Uruguay, está en España. La ventana para hacer market lockin local antes de que entre un español es ahora.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="num">05</div>
+    <h2>Dominios investigados</h2>
+    <div class="meta">.uy</div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Dominio</th><th>Estado</th><th>Titular / Detalle</th><th>Notas</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="dom">elgordito.club</td><td><span class="status propio">Propio</span></td><td>Mariano Álvarez</td><td>Sitio del club. Vercel + Cloudflare.</td></tr>
+        <tr><td class="dom">terosoftware.uy</td><td><span class="status propio">Propio</span></td><td>Mariano Álvarez</td><td>Sitio empresa. Vercel.</td></tr>
+        <tr><td class="dom">cannabis.uy</td><td><span class="status tomado">Tomado</span></td><td>East Coast CC</td><td>Hostinger. En uso para el club competidor.</td></tr>
+        <tr><td class="dom">clubcannabico.uy</td><td><span class="status tomado">Tomado</span></td><td>Agustin Solla · agsollamagallanes@gmail.com · +598 91032616</td><td>Alta 22/12/2023. AWS + Netuy. "CACUMOL &amp; CHARLY" en landing.</td></tr>
+        <tr><td class="dom">clubes.uy</td><td><span class="status negociando">Negociando</span></td><td>Andrés Ferraro · andres.smn@outlook.com · +598 98042246 · Cufre 2313</td><td>Alta 16/09/2025 (8 meses). WhatsApp enviado 20/05 16:04. Walk-away: USD 800.</td></tr>
+        <tr><td class="dom">club.uy</td><td><span class="status tomado">Tomado</span></td><td>Santiago Aramendia · saramendia@gmail.com · 096 392996 · Juan Paullier 951</td><td>Alta 20/07/2012 (13 años). Premium domain. Walk-away: USD 2.500–3.500.</td></tr>
+        <tr><td class="dom">marihuana.uy / thc.uy / cbd.uy</td><td><span class="status tomado">Tomado</span></td><td>Mismo dueño (Registrar.com.uy)</td><td>Parked. Inversión/squat.</td></tr>
+        <tr><td class="dom">autocultivo.uy / verde.uy / sativa.uy</td><td><span class="status tomado">Tomado</span></td><td>Sin verificar · Antel NS</td><td>Parked. Patrón holder pasivo.</td></tr>
+        <tr><td class="dom">faso.uy</td><td><span class="status libre">Libre</span></td><td>—</td><td>Brand alternativo. Slang local.</td></tr>
+        <tr><td class="dom">clubescannabicos.uy / .com.uy</td><td><span class="status libre">Libre</span></td><td>—</td><td>Variantes plural.</td></tr>
+        <tr><td class="dom">clubcannabicos.uy / clubcanabico.uy</td><td><span class="status libre">Libre</span></td><td>—</td><td>Plural / typo.</td></tr>
+        <tr><td class="dom">cannabis.com.uy</td><td><span class="status libre">Libre</span></td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout note">
+    Negociaciones activas: <strong>clubes.uy</strong> con Andrés Ferraro (mensaje enviado, esperando 24–72hs). Si no responde o pide precio irrazonable, segundo movimiento sobre <strong>club.uy</strong> con Santiago Aramendia (mensaje borrador listo).
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="num">06</div>
+    <h2>SEO de elgordito.club</h2>
+    <div class="meta">Estado al 20/05</div>
+  </div>
+  <div class="two-col">
+    <div>
+      <h4>Lo que está sólido</h4>
+      <div class="prose">
+        <ul>
+          <li>Titles, descriptions, canonicals únicos por página</li>
+          <li>OG + Twitter cards completos</li>
+          <li>Sitemap.xml y robots.txt correctos</li>
+          <li>JSON-LD Organization</li>
+          <li><code>lang="es-UY"</code> declarado</li>
+          <li>Mobile responsive, HTTPS, jerarquía H1/H2 limpia</li>
+          <li>Posts del blog mencionan Montevideo y Canelones en cuerpo y en "Términos relacionados"</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <h4>Gap crítico</h4>
+      <div class="prose">
+        <ul>
+          <li>Home tiene <strong>0 menciones</strong> de Montevideo</li>
+          <li>Sede real está en Canelones — no se puede afirmar "en Montevideo"</li>
+          <li>Falta H1 con framing geo honesto ("área metropolitana de Montevideo" o "para Montevideo y Canelones")</li>
+          <li>JSON-LD sin <code>addressLocality</code> ni <code>geo</code></li>
+          <li>No hay Google Business Profile</li>
+          <li>Footer sin NAP explícito</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="callout warn">
+    Competencia SEO directa: <strong>clubescannabicos.com</strong> (directorio) e <strong>ircca.gub.uy</strong> (gov.uy, máxima autoridad). Top-1 difícil; top-3/top-5 alcanzable con cambios on-page + GBP.
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="num">07</div>
+    <h2>Modelo comercial</h2>
+    <div class="meta">Propuesta</div>
+  </div>
+  <div class="prose">
+    <p><strong>Estrategia:</strong> precio accesible + market share lockin. Math que cierra: <strong class="hl">USD 20/mes × 200 clubes ≈ USD 4.000/mes recurrente</strong>. Una vez que un club carga 6 meses de datos (socios, retiros, audit), no migra. Moat real.</p>
+  </div>
+  <div class="pricing-grid">
+    <div class="tier">
+      <div class="name">Free</div>
+      <div class="price">0<small> /mes</small></div>
+      <div class="desc">Hasta 5 socios. Adquisición.</div>
+    </div>
+    <div class="tier">
+      <div class="name">Plan Club</div>
+      <div class="price">19<small> USD/mes</small></div>
+      <div class="desc">Todas las features. El 70% de clientes.</div>
+    </div>
+    <div class="tier">
+      <div class="name">Premium</div>
+      <div class="price">49<small> USD/mes</small></div>
+      <div class="desc">Dominio propio, branding custom, backup, priority.</div>
+    </div>
+    <div class="tier">
+      <div class="name">Enterprise</div>
+      <div class="price">150<small> USD/mes</small></div>
+      <div class="desc">VPS dedicado, SLA, soporte presencial.</div>
+    </div>
+  </div>
+  <div class="two-col" style="margin-top: 28px;">
+    <div>
+      <h4>Camino A · Multi-tenant</h4>
+      <div class="prose">
+        <p>Shared DB con tenant_id + RLS. Costo infra: <span class="hl-sage">USD 1–2/club</span>. Margen alto. Onboarding self-service. <strong>Contra:</strong> shared DB suena feo a directivos paranoicos.</p>
+      </div>
+    </div>
+    <div>
+      <h4>Camino B · Single-tenant containerizado</h4>
+      <div class="prose">
+        <p>Docker por club, todos en VPS/k3s. Costo infra: <span class="hl">USD 3–5/club</span>. Margen menor pero más limpio legalmente. <strong>Preferido por operador.</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="num">08</div>
+    <h2>Bitácora</h2>
+    <div class="meta">Acciones</div>
+  </div>
+  <div class="timeline">
+    <div class="ev done">
+      <div class="date">— previa</div>
+      <div class="what">Gestor del Gordito construido y desplegado en producción <span class="tag">hecho</span></div>
+    </div>
+    <div class="ev done">
+      <div class="date">— previa</div>
+      <div class="what">elgordito.club publicado en Vercel <span class="tag">hecho</span></div>
+    </div>
+    <div class="ev done">
+      <div class="date">— previa</div>
+      <div class="what">terosoftware.uy publicado <span class="tag">hecho</span></div>
+    </div>
+    <div class="ev done">
+      <div class="date">20/05/2026</div>
+      <div class="what">Auditoría SEO completa de elgordito.club <span class="tag">hecho</span></div>
+    </div>
+    <div class="ev done">
+      <div class="date">20/05/2026</div>
+      <div class="what">Investigación de competidores en gestores y directorios <span class="tag">hecho</span></div>
+    </div>
+    <div class="ev done">
+      <div class="date">20/05/2026</div>
+      <div class="what">Investigación whois/DNS de dominios .uy del rubro <span class="tag">hecho</span></div>
+    </div>
+    <div class="ev active">
+      <div class="date">20/05/2026 · 16:04</div>
+      <div class="what">WhatsApp enviado a Andrés Ferraro por clubes.uy <span class="tag">esperando</span></div>
+    </div>
+    <div class="ev pending">
+      <div class="date">+ 24–72h</div>
+      <div class="what">Respuesta de Andrés. Si silencio o precio irrazonable, mensaje a Santiago por club.uy <span class="tag">pendiente</span></div>
+    </div>
+    <div class="ev pending">
+      <div class="date">próximo</div>
+      <div class="what">Revisar arquitectura del repo · decidir Camino A vs Camino B <span class="tag">pendiente</span></div>
+    </div>
+    <div class="ev pending">
+      <div class="date">próximo</div>
+      <div class="what">Limpiar repo en template parametrizado (deploy script, branding, migraciones, backups) <span class="tag">pendiente</span></div>
+    </div>
+    <div class="ev pending">
+      <div class="date">próximo</div>
+      <div class="what">Levantar demo.terosoftware.uy con data fake y cinematográfico de primer-load <span class="tag">pendiente</span></div>
+    </div>
+    <div class="ev pending">
+      <div class="date">próximo</div>
+      <div class="what">Agregar sección de producto + case study El Gordito en terosoftware.uy <span class="tag">pendiente</span></div>
+    </div>
+    <div class="ev pending">
+      <div class="date">próximo</div>
+      <div class="what">Outreach a clubes IRCCA (lista pública por departamento) <span class="tag">pendiente</span></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div>Dossier · <span class="gold">v1.1</span> · Tero Software</div>
+  <div>20·05·2026 · Montevideo · Uruguay</div>
+</footer>
+
+</div>
+</body>
+</html>
