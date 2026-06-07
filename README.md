@@ -1,3 +1,5 @@
+
+
 # Club Cannábico App
 
 Plataforma web para clubs cannábicos: landing pública + postulación de socios + panel de socios + panel de administración. Agenda de retiros con reserva de stock, gestión de genéticas, acopio, postulaciones y administradores con permisos granulares.

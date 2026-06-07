@@ -2,6 +2,7 @@ import { Link } from "@/components/progress/link";
 import { auth } from "@/lib/auth";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { getCurrentTenant } from "@/lib/tenant";
 
 export default async function PublicLayout({
   children,
@@ -9,7 +10,11 @@ export default async function PublicLayout({
   children: React.ReactNode;
 }) {
   const session = await auth();
-  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
+  // Bajo un subdominio de club, el header muestra el nombre del club. En el
+  // apex (sin tenant) cae al nombre de la app.
+  const tenant = await getCurrentTenant();
+  const appName =
+    tenant?.name ?? process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
   const panelHref = session
     ? session.user.role === "ADMIN"
       ? "/administrador"
@@ -20,7 +25,7 @@ export default async function PublicLayout({
     <>
       <header className="border-b border-[var(--border)] bg-[var(--card)] sticky top-0 z-10">
         <div className="container-page py-3 flex items-center justify-between gap-4">
-          <Logo href="/" />
+          <Logo href="/" name={appName} />
           <nav className="flex items-center gap-1">
             <ThemeToggle />
             <Link

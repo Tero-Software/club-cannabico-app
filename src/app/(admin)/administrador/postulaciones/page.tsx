@@ -21,6 +21,7 @@ export default async function AdminPostulacionesPage() {
   if (!can(session, "postulaciones:manage")) notFound();
 
   const postulaciones = await prisma.application.findMany({
+    where: { tenantId: session!.user.tenantId },
     orderBy: [{ status: "asc" }, { createdAt: "desc" }],
   });
 

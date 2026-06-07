@@ -5,7 +5,19 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { invalidateClubConfig } from "@/lib/config";
 
+// Texto opcional de presentación: cadena vacía -> null para no guardar "".
+const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .transform((v) => (v === "" ? null : v))
+    .nullable();
+
 const schema = z.object({
+  city: optionalText(120),
+  tagline: optionalText(200),
+  description: optionalText(2000),
   workingDays: z.array(z.number().int().min(0).max(6)).min(1, "Seleccioná al menos un día"),
   timeSlots: z.array(z.string().regex(/^\d{2}:\d{2}-\d{2}:\d{2}$/, "Formato HH:MM-HH:MM")).min(1, "Agregá al menos una franja"),
   maxGramsPerMonth: z.number().int().positive().max(10000),
@@ -35,6 +47,9 @@ export async function updateClubConfigAction(
     .filter(Boolean);
 
   const parsed = schema.safeParse({
+    city: String(fd.get("city") ?? ""),
+    tagline: String(fd.get("tagline") ?? ""),
+    description: String(fd.get("description") ?? ""),
     workingDays,
     timeSlots,
     maxGramsPerMonth: Number(fd.get("maxGramsPerMonth")),
@@ -61,12 +76,11 @@ export async function updateClubConfigAction(
     return { error: "El mínimo por variedad no puede superar el mínimo por retiro" };
   }
 
-  await prisma.clubConfig.upsert({
-    where: { id: "singleton" },
-    update: parsed.data,
-    create: { id: "singleton", ...parsed.data },
+  await prisma.tenant.update({
+    where: { id: session.user.tenantId },
+    data: parsed.data,
   });
 
-  invalidateClubConfig();
+  invalidateClubConfig(session.user.tenantId);
   return { ok: true };
 }

@@ -18,6 +18,9 @@ export function ConfigForm({
   initial,
 }: {
   initial: {
+    city: string | null;
+    tagline: string | null;
+    description: string | null;
     workingDays: number[];
     timeSlots: string[];
     maxGramsPerMonth: number;
@@ -52,6 +55,63 @@ export function ConfigForm({
       {days.map((d) => (
         <input key={d} type="hidden" name="workingDays" value={d} />
       ))}
+
+      <div className="flex flex-col gap-4 pb-2 border-b border-[var(--border)]">
+        <div>
+          <h3 className="text-sm font-medium">Presentación pública</h3>
+          <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+            Lo que se muestra en la portada del club.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="city" className="label">
+            Ciudad
+          </label>
+          <input
+            id="city"
+            name="city"
+            type="text"
+            maxLength={120}
+            defaultValue={initial.city ?? ""}
+            placeholder="Montevideo"
+            className="input"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="tagline" className="label">
+            Frase de portada
+          </label>
+          <input
+            id="tagline"
+            name="tagline"
+            type="text"
+            maxLength={200}
+            defaultValue={initial.tagline ?? ""}
+            placeholder="Cultivo colectivo y responsable"
+            className="input"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="description" className="label">
+            Descripción
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            rows={4}
+            maxLength={2000}
+            defaultValue={initial.description ?? ""}
+            placeholder="Quiénes somos, cómo funciona el club, etc."
+            className="input"
+          />
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">
+            Texto libre. Los saltos de línea se respetan en la portada.
+          </p>
+        </div>
+      </div>
 
       <div>
         <label className="label">Días hábiles de retiro</label>

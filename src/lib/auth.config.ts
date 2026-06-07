@@ -8,6 +8,8 @@ declare module "next-auth" {
     mustChangePassword?: boolean;
     totpEnabled?: boolean;
     expiresAt?: string | null;
+    tenantId?: string;
+    tenantSlug?: string;
   }
   interface Session {
     user: {
@@ -19,6 +21,8 @@ declare module "next-auth" {
       mustChangePassword: boolean;
       totpEnabled: boolean;
       expiresAt: string | null;
+      tenantId: string;
+      tenantSlug: string;
     };
   }
 }
@@ -42,6 +46,8 @@ export const authConfig = {
           user.totpEnabled ?? false;
         (token as { expiresAt?: string | null }).expiresAt =
           user.expiresAt ?? null;
+        (token as { tenantId?: string }).tenantId = user.tenantId;
+        (token as { tenantSlug?: string }).tenantSlug = user.tenantSlug;
         if (user.role === "VISITANTE") {
           (token as { exp?: number }).exp =
             Math.floor(Date.now() / 1000) + 60 * 60;
@@ -61,6 +67,10 @@ export const authConfig = {
           (token as { totpEnabled?: boolean }).totpEnabled ?? false;
         session.user.expiresAt =
           (token as { expiresAt?: string | null }).expiresAt ?? null;
+        session.user.tenantId =
+          (token as { tenantId?: string }).tenantId ?? "";
+        session.user.tenantSlug =
+          (token as { tenantSlug?: string }).tenantSlug ?? "";
       }
       return session;
     },

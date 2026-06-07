@@ -12,9 +12,13 @@ async function requireSuperadmin() {
   return session;
 }
 
-async function assertCanMutateTarget(targetId: string, actorId: string) {
-  const target = await prisma.user.findUnique({
-    where: { id: targetId },
+async function assertCanMutateTarget(
+  targetId: string,
+  actorId: string,
+  tenantId: string,
+) {
+  const target = await prisma.user.findFirst({
+    where: { id: targetId, tenantId },
     select: { isOwner: true },
   });
   if (!target) throw new Error("Usuario no encontrado");
@@ -24,9 +28,9 @@ async function assertCanMutateTarget(targetId: string, actorId: string) {
   return target;
 }
 
-async function isActorOwner(actorId: string) {
-  const actor = await prisma.user.findUnique({
-    where: { id: actorId },
+async function isActorOwner(actorId: string, tenantId: string) {
+  const actor = await prisma.user.findFirst({
+    where: { id: actorId, tenantId },
     select: { isOwner: true },
   });
   return !!actor?.isOwner;
@@ -39,13 +43,14 @@ export type AdminFormState = {
 
 export async function promoverASocioAction(formData: FormData) {
   const session = await requireSuperadmin();
+  const tenantId = session.user.tenantId;
   const id = formData.get("id");
   if (typeof id !== "string") return;
   if (id === session.user.id) return;
-  await assertCanMutateTarget(id, session.user.id);
+  await assertCanMutateTarget(id, session.user.id, tenantId);
 
   await prisma.user.update({
-    where: { id },
+    where: { id, tenantId },
     data: { role: "ADMIN", permissions: [] },
   });
   await audit({
@@ -60,13 +65,14 @@ export async function promoverASocioAction(formData: FormData) {
 
 export async function degradarAdminAction(formData: FormData) {
   const session = await requireSuperadmin();
+  const tenantId = session.user.tenantId;
   const id = formData.get("id");
   if (typeof id !== "string") return;
   if (id === session.user.id) return;
-  await assertCanMutateTarget(id, session.user.id);
+  await assertCanMutateTarget(id, session.user.id, tenantId);
 
   await prisma.user.update({
-    where: { id },
+    where: { id, tenantId },
     data: { role: "MEMBER", permissions: [] },
   });
   await audit({
@@ -81,19 +87,20 @@ export async function degradarAdminAction(formData: FormData) {
 
 export async function actualizarPermisosAction(formData: FormData) {
   const session = await requireSuperadmin();
+  const tenantId = session.user.tenantId;
   const id = formData.get("id");
   if (typeof id !== "string") return;
   if (id === session.user.id) {
     return;
   }
-  await assertCanMutateTarget(id, session.user.id);
+  await assertCanMutateTarget(id, session.user.id, tenantId);
 
-  const actor = await prisma.user.findUnique({
-    where: { id: session.user.id },
+  const actor = await prisma.user.findFirst({
+    where: { id: session.user.id, tenantId },
     select: { isOwner: true, permissions: true },
   });
-  const target = await prisma.user.findUnique({
-    where: { id },
+  const target = await prisma.user.findFirst({
+    where: { id, tenantId },
     select: { permissions: true },
   });
   if (!actor || !target) throw new Error("Usuario no encontrado");
@@ -116,7 +123,7 @@ export async function actualizarPermisosAction(formData: FormData) {
   const nuevos = Array.from(new Set<Permission>([...dentroDelScope, ...fueraDelScope]));
 
   await prisma.user.update({
-    where: { id },
+    where: { id, tenantId },
     data: { permissions: nuevos },
   });
   await audit({
@@ -132,14 +139,15 @@ export async function actualizarPermisosAction(formData: FormData) {
 
 export async function otorgarOwnerAction(formData: FormData) {
   const session = await requireSuperadmin();
-  if (!(await isActorOwner(session.user.id))) {
+  const tenantId = session.user.tenantId;
+  if (!(await isActorOwner(session.user.id, tenantId))) {
     throw new Error("Solo el owner puede otorgar este rol");
   }
   const id = formData.get("id");
   if (typeof id !== "string") return;
 
-  const target = await prisma.user.findUnique({
-    where: { id },
+  const target = await prisma.user.findFirst({
+    where: { id, tenantId },
     select: { role: true, isOwner: true },
   });
   if (!target) throw new Error("Usuario no encontrado");
@@ -147,7 +155,7 @@ export async function otorgarOwnerAction(formData: FormData) {
   if (target.isOwner) return;
 
   await prisma.user.update({
-    where: { id },
+    where: { id, tenantId },
     data: { isOwner: true },
   });
   await audit({

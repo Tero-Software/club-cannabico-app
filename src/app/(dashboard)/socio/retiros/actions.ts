@@ -79,7 +79,8 @@ export async function crearRetiroAction(
   if (fechaDate < today) {
     return { fieldErrors: { date: "La fecha no puede ser en el pasado" } };
   }
-  const config = await getClubConfig();
+  const tenantId = session.user.tenantId;
+  const config = await getClubConfig(tenantId);
   if (!config.diasHabiles.includes(fechaDate.getDay())) {
     return { fieldErrors: { date: "Los retiros son de lunes a viernes" } };
   }
@@ -98,7 +99,7 @@ export async function crearRetiroAction(
   }
 
   const geneticas = await prisma.strain.findMany({
-    where: { id: { in: geneticaIds } },
+    where: { id: { in: geneticaIds }, tenantId },
   });
   if (geneticas.length !== geneticaIds.length) {
     return { error: "Una variedad seleccionada no está disponible." };
@@ -112,6 +113,7 @@ export async function crearRetiroAction(
   );
   const retirosDelMes = await prisma.withdrawal.findMany({
     where: {
+      tenantId,
       userId: session.user.id,
       date: { gte: inicioMes, lt: inicioMesSiguiente },
       status: { notIn: ["REJECTED", "CANCELLED"] },
@@ -131,12 +133,14 @@ export async function crearRetiroAction(
 
   const created = await prisma.withdrawal.create({
     data: {
+      tenantId,
       userId: session.user.id,
       date: fechaDate,
       timeSlot,
       notes: notes ? String(notes) : null,
       items: {
         create: validItems.map((i) => ({
+          tenantId,
           strainId: i.strainId,
           amount: i.amount,
         })),
@@ -172,12 +176,15 @@ export async function cancelarRetiroAction(formData: FormData) {
   const id = formData.get("id");
   if (typeof id !== "string") return;
 
-  const retiro = await prisma.withdrawal.findUnique({ where: { id } });
+  const tenantId = session.user.tenantId;
+  const retiro = await prisma.withdrawal.findFirst({
+    where: { id, tenantId },
+  });
   if (!retiro || retiro.userId !== session.user.id) return;
   if (retiro.status !== "PENDING" && retiro.status !== "APPROVED") return;
 
   await prisma.$transaction(async (tx) => {
-    await releaseReservationsForWithdrawal(tx, id);
+    await releaseReservationsForWithdrawal(tx, id, tenantId);
     await tx.withdrawal.update({
       where: { id },
       data: { status: "CANCELLED" },

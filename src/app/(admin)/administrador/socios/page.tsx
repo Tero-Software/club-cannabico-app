@@ -28,12 +28,13 @@ export default async function AdminSociosPage({
   const sort: SortKey =
     SORTS.find((s) => s.value === orden)?.value ?? "ultimo";
 
+  const tenantId = session!.user.tenantId;
   const pendingPostulaciones = can(session, "postulaciones:manage")
-    ? await prisma.application.count({ where: { status: "PENDING" } })
+    ? await prisma.application.count({ where: { tenantId, status: "PENDING" } })
     : 0;
 
   const socios = await prisma.user.findMany({
-    where: { role: "MEMBER" },
+    where: { tenantId, role: "MEMBER" },
     select: {
       id: true,
       name: true,

@@ -11,7 +11,7 @@ export default async function RetirosPage() {
   if (!session) return null;
 
   const retiros = await prisma.withdrawal.findMany({
-    where: { userId: session.user.id },
+    where: { tenantId: session.user.tenantId, userId: session.user.id },
     include: { items: { include: { strain: true } } },
     orderBy: { date: "desc" },
   });

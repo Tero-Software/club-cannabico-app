@@ -68,6 +68,7 @@ export async function createProductoAction(
 
   const created = await prisma.strain.create({
     data: {
+      tenantId: session.user.tenantId,
       name: parsed.data.name,
       bank: parsed.data.bank || null,
       description: parsed.data.description || null,
@@ -109,7 +110,9 @@ export async function updateProductoAction(formData: FormData) {
   });
   if (!parsed.success) return;
 
-  const before = await prisma.strain.findUnique({ where: { id } });
+  const before = await prisma.strain.findFirst({
+    where: { id, tenantId: session.user.tenantId },
+  });
   if (!before) return;
 
   const after = {
@@ -120,7 +123,7 @@ export async function updateProductoAction(formData: FormData) {
     photos: parsed.data.photos,
   };
 
-  await prisma.strain.update({ where: { id }, data: after });
+  await prisma.strain.update({ where: { id: before.id }, data: after });
 
   const removedPhotos = before.photos.filter((p) => !after.photos.includes(p));
   if (removedPhotos.length > 0) await deleteBlobs(removedPhotos);
@@ -154,17 +157,21 @@ export async function deleteProductoAction(
   const id = formData.get("id");
   if (typeof id !== "string") return;
 
-  const itemsCount = await prisma.withdrawalItem.count({ where: { strainId: id } });
+  const strain = await prisma.strain.findFirst({
+    where: { id, tenantId: session.user.tenantId },
+    select: { id: true, photos: true },
+  });
+  if (!strain) return;
+
+  const itemsCount = await prisma.withdrawalItem.count({
+    where: { strainId: strain.id, tenantId: session.user.tenantId },
+  });
   if (itemsCount > 0) {
     return { error: "Esta genética tiene retiros asociados y no se puede eliminar." };
   }
 
-  const strain = await prisma.strain.findUnique({
-    where: { id },
-    select: { photos: true },
-  });
-  await prisma.strain.delete({ where: { id } });
-  if (strain?.photos.length) await deleteBlobs(strain.photos);
+  await prisma.strain.delete({ where: { id: strain.id } });
+  if (strain.photos.length) await deleteBlobs(strain.photos);
 
   await audit({
     userId: session.user.id,

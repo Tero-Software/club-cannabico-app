@@ -10,10 +10,8 @@ export default async function ConfiguracionPage() {
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/socio");
 
-  const row = await prisma.clubConfig.upsert({
-    where: { id: "singleton" },
-    update: {},
-    create: { id: "singleton" },
+  const row = await prisma.tenant.findUniqueOrThrow({
+    where: { id: session.user.tenantId },
   });
 
   const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
@@ -29,6 +27,9 @@ export default async function ConfiguracionPage() {
 
       <ConfigForm
         initial={{
+          city: row.city,
+          tagline: row.tagline,
+          description: row.description,
           workingDays: row.workingDays,
           timeSlots: row.timeSlots,
           maxGramsPerMonth: row.maxGramsPerMonth,

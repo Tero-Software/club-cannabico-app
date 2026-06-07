@@ -31,15 +31,18 @@ export default async function AdminRetirosPage({
 
   const { estado } = await searchParams;
   const filtro = FILTROS.find((f) => f.value === estado)?.value ?? "TODOS";
+  const tenantId = session!.user.tenantId;
+
+  const statusWhere =
+    filtro === "TODOS"
+      ? {}
+      : filtro === "PENDIENTES"
+        ? { status: { in: ["PENDING", "APPROVED"] as WithdrawalStatus[] } }
+        : { status: filtro as WithdrawalStatus };
 
   const [retiros, socios, containerItems, config] = await Promise.all([
     prisma.withdrawal.findMany({
-      where:
-        filtro === "TODOS"
-          ? {}
-          : filtro === "PENDIENTES"
-            ? { status: { in: ["PENDING", "APPROVED"] } }
-            : { status: filtro as WithdrawalStatus },
+      where: { tenantId, ...statusWhere },
       include: {
         items: { include: { strain: true } },
         user: { select: { name: true, email: true, role: true } },
@@ -48,18 +51,18 @@ export default async function AdminRetirosPage({
       take: 100,
     }),
     prisma.user.findMany({
-      where: { role: "MEMBER", active: true },
+      where: { tenantId, role: "MEMBER", active: true },
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     }),
     prisma.containerItem.findMany({
-      where: { container: { active: true }, currentWeight: { gt: 0 } },
+      where: { tenantId, container: { active: true }, currentWeight: { gt: 0 } },
       include: {
         strain: { select: { id: true, name: true } },
         reservations: { select: { amount: true } },
       },
     }),
-    getClubConfig(),
+    getClubConfig(tenantId),
   ]);
 
   const strainFreeMap = new Map<string, { id: string; name: string }>();

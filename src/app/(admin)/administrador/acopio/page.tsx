@@ -13,8 +13,10 @@ export default async function ContainersPage() {
   const session = await auth();
   if (!can(session, "containers:manage")) notFound();
 
+  const tenantId = session!.user.tenantId;
   const [containersRaw, strains] = await Promise.all([
     prisma.container.findMany({
+      where: { tenantId },
       orderBy: [{ active: "desc" }, { number: "asc" }],
       include: {
         items: {
@@ -28,6 +30,7 @@ export default async function ContainersPage() {
       },
     }),
     prisma.strain.findMany({
+      where: { tenantId },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

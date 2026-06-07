@@ -10,9 +10,11 @@ export default async function DashboardHome() {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
+  const tenantId = session.user.tenantId;
   const [proximos, historial, total] = await Promise.all([
     prisma.withdrawal.findMany({
       where: {
+        tenantId,
         userId: session.user.id,
         date: { gte: now },
         status: { in: ["PENDING", "APPROVED"] },
@@ -22,13 +24,13 @@ export default async function DashboardHome() {
       take: 5,
     }),
     prisma.withdrawal.findMany({
-      where: { userId: session.user.id, status: "COMPLETED" },
+      where: { tenantId, userId: session.user.id, status: "COMPLETED" },
       include: { items: { include: { strain: true } } },
       orderBy: { date: "desc" },
       take: 3,
     }),
     prisma.withdrawal.count({
-      where: { userId: session.user.id, status: "COMPLETED" },
+      where: { tenantId, userId: session.user.id, status: "COMPLETED" },
     }),
   ]);
 

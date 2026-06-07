@@ -11,9 +11,10 @@ export default async function AdminAdminsPage() {
   const session = await auth();
   if (!can(session, "admins:manage")) notFound();
 
+  const tenantId = session!.user.tenantId;
   const [admins, socios] = await Promise.all([
     prisma.user.findMany({
-      where: { role: "ADMIN" },
+      where: { tenantId, role: "ADMIN" },
       orderBy: { name: "asc" },
       select: {
         id: true,
@@ -24,7 +25,7 @@ export default async function AdminAdminsPage() {
       },
     }),
     prisma.user.findMany({
-      where: { role: "MEMBER", active: true },
+      where: { tenantId, role: "MEMBER", active: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true, email: true },
     }),

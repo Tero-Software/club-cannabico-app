@@ -23,10 +23,13 @@ type NewItemInput = {
 export async function createContainerAction(formData: FormData) {
   const session = await requireAdmin();
 
+  const tenantId = session.user.tenantId;
   const number = parseInt(String(formData.get("number")), 10);
   if (isNaN(number)) return { error: "Número inválido" };
 
-  const exists = await prisma.container.findUnique({ where: { number } });
+  const exists = await prisma.container.findUnique({
+    where: { tenantId_number: { tenantId, number } },
+  });
   if (exists) return { error: `El contenedor #${number} ya existe` };
 
   let items: NewItemInput[] = [];
@@ -50,16 +53,23 @@ export async function createContainerAction(formData: FormData) {
 
   const container = await prisma.container.create({
     data: {
+      tenantId,
       number,
       notes: String(formData.get("notes") || "") || null,
       items: {
         create: items.map((it) => ({
+          tenantId,
           strainId: it.strainId,
           plantNumber: it.plantNumber,
           initialWeight: it.weight,
           currentWeight: it.weight,
           movements: {
-            create: { type: "IN", amount: it.weight, notes: "Carga inicial" },
+            create: {
+              tenantId,
+              type: "IN",
+              amount: it.weight,
+              notes: "Carga inicial",
+            },
           },
         })),
       },
@@ -85,14 +95,16 @@ export async function updateContainerAction(formData: FormData) {
   const session = await requireAdmin();
   const id = String(formData.get("id"));
 
-  const before = await prisma.container.findUnique({ where: { id } });
+  const before = await prisma.container.findFirst({
+    where: { id, tenantId: session.user.tenantId },
+  });
   if (!before) return;
 
   const nextNotes = String(formData.get("notes") || "") || null;
   const nextActive = formData.get("active") === "on";
 
   await prisma.container.update({
-    where: { id },
+    where: { id: before.id },
     data: { notes: nextNotes, active: nextActive },
   });
 
@@ -121,10 +133,11 @@ export async function toggleContainerActiveAction(formData: FormData) {
   const id = String(formData.get("id"));
   const active = formData.get("active") === "true";
 
-  await prisma.container.update({
-    where: { id },
+  const res = await prisma.container.updateMany({
+    where: { id, tenantId: session.user.tenantId },
     data: { active: !active },
   });
+  if (res.count === 0) return;
 
   await audit({
     userId: session.user.id,
@@ -141,6 +154,7 @@ export async function toggleContainerActiveAction(formData: FormData) {
 
 export async function addContainerItemAction(formData: FormData) {
   const session = await requireAdmin();
+  const tenantId = session.user.tenantId;
   const containerId = String(formData.get("containerId"));
   const strainId = String(formData.get("strainId") || "") || null;
   const plantNumber = String(formData.get("plantNumber") || "") || null;
@@ -148,8 +162,15 @@ export async function addContainerItemAction(formData: FormData) {
 
   if (isNaN(weight) || weight <= 0) return { error: "Peso inválido" };
 
+  const container = await prisma.container.findFirst({
+    where: { id: containerId, tenantId },
+    select: { id: true },
+  });
+  if (!container) return { error: "Contenedor no encontrado" };
+
   const item = await prisma.containerItem.create({
     data: {
+      tenantId,
       containerId,
       strainId,
       plantNumber,
@@ -161,6 +182,7 @@ export async function addContainerItemAction(formData: FormData) {
   // Record IN movement
   await prisma.movement.create({
     data: {
+      tenantId,
       containerItemId: item.id,
       type: "IN",
       amount: weight,
@@ -192,8 +214,9 @@ export async function addMovementAction(formData: FormData) {
 
   if (isNaN(amount) || amount <= 0) return { error: "Cantidad inválida" };
 
-  const item = await prisma.containerItem.findUnique({
-    where: { id: containerItemId },
+  const tenantId = session.user.tenantId;
+  const item = await prisma.containerItem.findFirst({
+    where: { id: containerItemId, tenantId },
   });
   if (!item) return { error: "Item no encontrado" };
 
@@ -208,7 +231,7 @@ export async function addMovementAction(formData: FormData) {
 
   await prisma.$transaction([
     prisma.movement.create({
-      data: { containerItemId, type, amount, notes },
+      data: { tenantId, containerItemId, type, amount, notes },
     }),
     prisma.containerItem.update({
       where: { id: containerItemId },
@@ -235,7 +258,10 @@ export async function deleteContainerItemAction(formData: FormData) {
   const session = await requireAdmin();
   const id = String(formData.get("id"));
 
-  await prisma.containerItem.delete({ where: { id } });
+  const res = await prisma.containerItem.deleteMany({
+    where: { id, tenantId: session.user.tenantId },
+  });
+  if (res.count === 0) return;
 
   await audit({
     userId: session.user.id,

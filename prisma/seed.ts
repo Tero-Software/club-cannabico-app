@@ -1,4 +1,6 @@
 import "dotenv/config";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import bcrypt from "bcryptjs";
@@ -6,108 +8,96 @@ import bcrypt from "bcryptjs";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
+const ALL_PERMISSIONS = [
+  "retiros:manage",
+  "socios:manage",
+  "geneticas:manage",
+  "containers:manage",
+  "postulaciones:manage",
+  "admins:manage",
+  "estadisticas:view",
+];
+
+type GeneticaSeed = {
+  code: string;
+  name: string;
+  bank: string | null;
+  description: string | null;
+  photos: string[];
+  sourceUrl: string | null;
+};
+
+function loadGeneticas(): GeneticaSeed[] {
+  const path = join(__dirname, "geneticas-demo.json");
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
+async function seedTenant(opts: {
+  slug: string;
+  name: string;
+  adminEmail: string;
+  adminPassword: string;
+  geneticas?: GeneticaSeed[];
+}) {
+  const tenant = await prisma.tenant.upsert({
+    where: { slug: opts.slug },
+    update: { name: opts.name, active: true },
+    create: { slug: opts.slug, name: opts.name },
+  });
+
+  const passwordHash = await bcrypt.hash(opts.adminPassword, 10);
+  await prisma.user.upsert({
+    where: { tenantId_email: { tenantId: tenant.id, email: opts.adminEmail } },
+    update: {
+      permissions: ALL_PERMISSIONS,
+      role: "ADMIN",
+      active: true,
+      isOwner: true,
+      mustChangePassword: false,
+    },
+    create: {
+      tenantId: tenant.id,
+      email: opts.adminEmail,
+      name: "Admin",
+      passwordHash,
+      role: "ADMIN",
+      permissions: ALL_PERMISSIONS,
+      isOwner: true,
+      mustChangePassword: false,
+    },
+  });
+
+  if (opts.geneticas?.length) {
+    const count = await prisma.strain.count({ where: { tenantId: tenant.id } });
+    if (count === 0) {
+      await prisma.strain.createMany({
+        data: opts.geneticas.map((g) => ({ ...g, tenantId: tenant.id })),
+      });
+    }
+  }
+
+  console.log(
+    `   ${opts.slug} → ${opts.adminEmail} (${opts.geneticas?.length ?? 0} genéticas)`,
+  );
+}
+
 async function main() {
-  const allPermissions = [
-    "retiros:manage",
-    "socios:manage",
-    "geneticas:manage",
-    "containers:manage",
-    "postulaciones:manage",
-    "admins:manage",
-    "estadisticas:view",
-  ];
+  await seedTenant({
+    slug: "demo",
+    name: "Club Demo",
+    adminEmail: "admin@clubcannabico.app",
+    adminPassword: "Demo2026!",
+    geneticas: loadGeneticas(),
+  });
 
-  const OWNER_EMAIL = "admin@clubcannabico.app";
-  const admins: { email: string; name: string; password: string }[] = [
-    { email: OWNER_EMAIL, name: "Admin", password: "Demo2026!" },
-  ];
-
-  for (const a of admins) {
-    const passwordHash = await bcrypt.hash(a.password, 10);
-    const isOwner = a.email === OWNER_EMAIL;
-    await prisma.user.upsert({
-      where: { email: a.email },
-      update: {
-        permissions: allPermissions,
-        role: "ADMIN",
-        active: true,
-        isOwner,
-        mustChangePassword: false,
-      },
-      create: {
-        email: a.email,
-        name: a.name,
-        passwordHash,
-        role: "ADMIN",
-        permissions: allPermissions,
-        isOwner,
-        mustChangePassword: false,
-      },
-    });
-  }
-
-  const geneticasCount = await prisma.strain.count();
-  if (geneticasCount === 0) {
-    await prisma.strain.createMany({
-      data: [
-        {
-          name: "Blueberry",
-          bank: "BSF",
-          description:
-            "Predominantemente índica. Produce cogollos muy grandes, compactos y cubiertos de una gran capa de resina. Se recomienda para cultivadores con experiencia.",
-          photos: [
-            "/geneticas/blueberry-0.png",
-            "/geneticas/blueberry-1.png",
-            "/geneticas/blueberry-2.png",
-            "/geneticas/blueberry-3.png",
-          ],
-          sourceUrl: "https://www.bsfseeds.com.ar/producto/blue-berry/",
-        },
-        {
-          name: "Orange Blossom",
-          bank: "BSF",
-          description:
-            "Cruce entre un clon de California Orange y la Skunk. Variedad perfecta para aplicar técnicas de poda como SCROG o SOG.",
-          photos: [
-            "/geneticas/orange-blossom-0.png",
-            "/geneticas/orange-blossom-1.png",
-            "/geneticas/orange-blossom-2.png",
-            "/geneticas/orange-blossom-3.png",
-          ],
-          sourceUrl: "https://www.bsfseeds.com.ar/producto/orange-blossom/",
-        },
-        {
-          name: "Rainbows",
-          bank: "BSF",
-          description:
-            "Cruce de Zkittlez x Zkittlez con sabor a coctel de frutas y cogollos con toques violetas, lilas, rosas y verdes.",
-          photos: [
-            "/geneticas/Rainbows-1.png",
-            "/geneticas/Rainbows-2.png",
-            "/geneticas/Rainbows-3.png",
-            "/geneticas/Rainbows-4.png",
-          ],
-          sourceUrl: "https://www.bsfseeds.com.ar/producto/rainbows/",
-        },
-        {
-          name: "Lebron Haze",
-          bank: "BSF",
-          description:
-            "La evolución de las sativas: vigorosa en su crecimiento, rápida en su floración y con una gran producción.",
-          photos: [
-            "/geneticas/lebron-haze-0.png",
-            "/geneticas/lebron-haze-1.png",
-            "/geneticas/lebron-haze-2.png",
-            "/geneticas/lebron-haze-3.png",
-          ],
-          sourceUrl: "https://www.bsfseeds.com.ar/producto/lebron-haze/",
-        },
-      ],
-    });
-  }
+  await seedTenant({
+    slug: "club-test",
+    name: "Club Test",
+    adminEmail: "admin@club-test.local",
+    adminPassword: "Test2026!",
+  });
 
   console.log("✅ Seed completado");
-  console.log(`   Admins: ${admins.map((a) => a.email).join(", ")}`);
 }
 
 main()

@@ -27,20 +27,24 @@ export async function getUserAgent(): Promise<string | null> {
 }
 
 export async function recordLoginAttempt(
+  tenantId: string,
   email: string,
   success: boolean,
   ip: string | null,
 ) {
   await prisma.loginAttempt.create({
-    data: { email: email.toLowerCase(), success, ip },
+    data: { tenantId, email: email.toLowerCase(), success, ip },
   });
 }
 
-export async function ipRateLimited(ip: string | null): Promise<boolean> {
+export async function ipRateLimited(
+  tenantId: string,
+  ip: string | null,
+): Promise<boolean> {
   if (!ip) return false;
   const since = new Date(Date.now() - LOGIN_IP_WINDOW_MINUTES * 60_000);
   const count = await prisma.loginAttempt.count({
-    where: { ip, success: false, createdAt: { gte: since } },
+    where: { tenantId, ip, success: false, createdAt: { gte: since } },
   });
   return count >= LOGIN_IP_MAX;
 }

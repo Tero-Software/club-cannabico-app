@@ -25,9 +25,10 @@ export default async function SocioDetailPage({
   const { id } = await params;
   const { edit } = await searchParams;
   const initialEditing = edit === "1";
+  const tenantId = session!.user.tenantId;
 
-  const socio = await prisma.user.findUnique({
-    where: { id },
+  const socio = await prisma.user.findFirst({
+    where: { id, tenantId },
     select: {
       id: true,
       name: true,
@@ -44,7 +45,7 @@ export default async function SocioDetailPage({
   if (!socio) notFound();
 
   const logs = await prisma.auditLog.findMany({
-    where: { userId: id },
+    where: { userId: id, tenantId },
     orderBy: { createdAt: "desc" },
     take: 100,
   });

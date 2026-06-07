@@ -33,6 +33,7 @@ export async function redeemVisitorInviteAction(formData: FormData) {
 
       const user = await tx.user.create({
         data: {
+          tenantId: fresh.tenantId,
           email,
           name: "Visitante",
           passwordHash,

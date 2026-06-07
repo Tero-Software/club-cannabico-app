@@ -14,6 +14,8 @@ import {
 } from "@/lib/security";
 import { verifyTotp } from "@/lib/totp";
 import { audit } from "@/lib/audit";
+import { headers } from "next/headers";
+import { TENANT_HEADER } from "@/lib/tenant";
 import type { Role } from "@/generated/prisma/enums";
 
 class AuthError extends CredentialsSignin {
@@ -38,6 +40,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           (token as { totpEnabled?: boolean }).totpEnabled ?? false;
         session.user.expiresAt =
           (token as { expiresAt?: string | null }).expiresAt ?? null;
+        session.user.tenantId =
+          (token as { tenantId?: string }).tenantId ?? "";
+        session.user.tenantSlug =
+          (token as { tenantSlug?: string }).tenantSlug ?? "";
 
         // Fetch fresh permissions from DB so changes apply without re-login
         const fresh = await prisma.user.findUnique({
@@ -63,30 +69,43 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const { email, password, totp } = parsed.data;
         const ip = await getClientIp();
 
-        if (await ipRateLimited(ip)) {
-          await recordLoginAttempt(email, false, ip);
+        // Tenant del host (inyectado por el middleware). Sin tenant no se
+        // puede loguear: el login vive siempre bajo un subdominio de club.
+        const tenantSlug = (await headers()).get(TENANT_HEADER);
+        if (!tenantSlug) throw new AuthError("invalid_credentials");
+        const tenant = await prisma.tenant.findUnique({
+          where: { slug: tenantSlug },
+        });
+        if (!tenant || !tenant.active) {
+          throw new AuthError("invalid_credentials");
+        }
+
+        if (await ipRateLimited(tenant.id, ip)) {
+          await recordLoginAttempt(tenant.id, email, false, ip);
           throw new AuthError("ip_rate_limited");
         }
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({
+          where: { tenantId_email: { tenantId: tenant.id, email } },
+        });
         if (!user || !user.active) {
-          await recordLoginAttempt(email, false, ip);
+          await recordLoginAttempt(tenant.id, email, false, ip);
           throw new AuthError("invalid_credentials");
         }
         if (user.expiresAt && user.expiresAt < new Date()) {
-          await recordLoginAttempt(email, false, ip);
+          await recordLoginAttempt(tenant.id, email, false, ip);
           throw new AuthError("invalid_credentials");
         }
 
         const lock = lockoutState(user);
         if (lock.locked) {
-          await recordLoginAttempt(email, false, ip);
+          await recordLoginAttempt(tenant.id, email, false, ip);
           throw new AuthError("locked");
         }
 
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) {
-          await recordLoginAttempt(email, false, ip);
+          await recordLoginAttempt(tenant.id, email, false, ip);
           await registerFailedLogin(user.id);
           throw new AuthError("invalid_credentials");
         }
@@ -94,12 +113,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (user.totpEnabled && user.totpSecret) {
           if (!totp) throw new AuthError("totp_required");
           if (!verifyTotp(user.totpSecret, totp)) {
-            await recordLoginAttempt(email, false, ip);
+            await recordLoginAttempt(tenant.id, email, false, ip);
             await registerFailedLogin(user.id);
             throw new AuthError("totp_invalid");
           }
         } else if (user.role === "ADMIN") {
-          await recordLoginAttempt(email, true, ip);
+          await recordLoginAttempt(tenant.id, email, true, ip);
           await registerSuccessfulLogin(user.id);
           await audit({
             userId: user.id,
@@ -115,10 +134,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             mustChangePassword: user.mustChangePassword,
             totpEnabled: false,
             expiresAt: user.expiresAt ? user.expiresAt.toISOString() : null,
+            tenantId: tenant.id,
+            tenantSlug: tenant.slug,
           };
         }
 
-        await recordLoginAttempt(email, true, ip);
+        await recordLoginAttempt(tenant.id, email, true, ip);
         await registerSuccessfulLogin(user.id);
         await audit({
           userId: user.id,
@@ -135,6 +156,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           mustChangePassword: user.mustChangePassword,
           totpEnabled: user.totpEnabled,
           expiresAt: user.expiresAt ? user.expiresAt.toISOString() : null,
+          tenantId: tenant.id,
+          tenantSlug: tenant.slug,
         };
       },
     }),

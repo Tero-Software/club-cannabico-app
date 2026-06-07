@@ -12,6 +12,7 @@ export default async function AdminGeneticasPage() {
   if (!can(session, "geneticas:manage")) notFound();
 
   const geneticas = await prisma.strain.findMany({
+    where: { tenantId: session!.user.tenantId },
     orderBy: { name: "asc" },
   });
 

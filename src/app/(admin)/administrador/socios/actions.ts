@@ -44,19 +44,27 @@ export async function createSocioAction(
     return { fieldErrors };
   }
 
+  const tenantId = session.user.tenantId;
+
   const existente = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
+    where: { tenantId_email: { tenantId, email: parsed.data.email } },
   });
   if (existente) {
     return { error: "Ya existe un usuario con ese email" };
   }
 
   if (parsed.data.active) {
-    const socioCount = await prisma.user.count({
-      where: { role: "MEMBER", active: true },
+    const tenant = await prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { maxActiveMembers: true },
     });
-    if (socioCount >= 45) {
-      return { error: "El club ya tiene 45 socios activos" };
+    const socioCount = await prisma.user.count({
+      where: { tenantId, role: "MEMBER", active: true },
+    });
+    if (socioCount >= tenant.maxActiveMembers) {
+      return {
+        error: `El club alcanzó el máximo de ${tenant.maxActiveMembers} socios activos`,
+      };
     }
   }
 
@@ -64,6 +72,7 @@ export async function createSocioAction(
 
   const created = await prisma.user.create({
     data: {
+      tenantId,
       name: parsed.data.name,
       email: parsed.data.email,
       phone: parsed.data.phone || null,
@@ -121,12 +130,14 @@ export async function editSocioAction(
     return { fieldErrors };
   }
 
-  const before = await prisma.user.findUnique({ where: { id } });
+  const tenantId = session.user.tenantId;
+
+  const before = await prisma.user.findFirst({ where: { id, tenantId } });
   if (!before) return { error: "Socio no encontrado" };
 
   if (parsed.data.email !== before.email) {
     const dup = await prisma.user.findUnique({
-      where: { email: parsed.data.email },
+      where: { tenantId_email: { tenantId, email: parsed.data.email } },
     });
     if (dup && dup.id !== id) {
       return { fieldErrors: { email: "Ya existe un usuario con ese email" } };
@@ -134,7 +145,7 @@ export async function editSocioAction(
   }
 
   await prisma.user.update({
-    where: { id },
+    where: { id: before.id },
     data: {
       name: parsed.data.name,
       email: parsed.data.email,
@@ -181,11 +192,13 @@ export async function createVisitorInviteAction(
   const session = await auth();
   assertCan(session, "socios:manage");
 
+  const tenantId = session.user.tenantId;
+
   const cutoff = new Date(
     Date.now() - VISITOR_RETENTION_DAYS * 24 * 60 * 60 * 1000,
   );
   await prisma.user.deleteMany({
-    where: { role: "VISITANTE", createdAt: { lt: cutoff } },
+    where: { tenantId, role: "VISITANTE", createdAt: { lt: cutoff } },
   });
 
   const token = crypto.randomBytes(24).toString("base64url");
@@ -193,6 +206,7 @@ export async function createVisitorInviteAction(
 
   await prisma.visitorInvite.create({
     data: {
+      tenantId,
       token,
       expiresAt,
       createdBy: session.user.id,
@@ -222,12 +236,14 @@ export async function toggleSocioActivoAction(formData: FormData) {
   if (typeof id !== "string") return;
   if (id === session.user.id) return;
 
-  const user = await prisma.user.findUnique({ where: { id } });
+  const user = await prisma.user.findFirst({
+    where: { id, tenantId: session.user.tenantId },
+  });
   if (!user) return;
 
   const nextActive = !user.active;
   await prisma.user.update({
-    where: { id },
+    where: { id: user.id },
     data: { active: nextActive },
   });
 

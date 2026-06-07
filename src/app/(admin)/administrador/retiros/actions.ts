@@ -37,9 +37,10 @@ export async function updateWithdrawalStatusAction(
   if (!VALID_ESTADOS.includes(estado as WithdrawalStatus)) return;
 
   const next = estado as WithdrawalStatus;
+  const tenantId = session.user.tenantId;
 
-  const prev = await prisma.withdrawal.findUnique({
-    where: { id },
+  const prev = await prisma.withdrawal.findFirst({
+    where: { id, tenantId },
     select: { status: true, userId: true, user: { select: { role: true } } },
   });
   if (!prev) return;
@@ -55,14 +56,14 @@ export async function updateWithdrawalStatusAction(
         (next === "REJECTED" || next === "CANCELLED");
 
       if (next === "APPROVED" && prev.status !== "COMPLETED") {
-        await reserveForWithdrawal(tx, id);
+        await reserveForWithdrawal(tx, id, tenantId);
       } else if (next === "COMPLETED") {
         if (prev.status !== "APPROVED") {
-          await reserveForWithdrawal(tx, id);
+          await reserveForWithdrawal(tx, id, tenantId);
         }
-        await consumeReservationsForWithdrawal(tx, id);
+        await consumeReservationsForWithdrawal(tx, id, tenantId);
       } else if (leavingReserved) {
-        await releaseReservationsForWithdrawal(tx, id);
+        await releaseReservationsForWithdrawal(tx, id, tenantId);
       }
 
       await tx.withdrawal.update({
@@ -148,13 +149,14 @@ export async function crearRetiroAdminAction(
   if (Number.isNaN(fechaDate.getTime())) {
     return { fieldErrors: { date: "Fecha inválida" } };
   }
-  const config = await getClubConfig();
+  const tenantId = session.user.tenantId;
+  const config = await getClubConfig(tenantId);
   if (!config.horarios.includes(timeSlot)) {
     return { fieldErrors: { timeSlot: "Horario no válido" } };
   }
 
-  const socio = await prisma.user.findUnique({
-    where: { id: userId },
+  const socio = await prisma.user.findFirst({
+    where: { id: userId, tenantId },
     select: { id: true, role: true, active: true, name: true, email: true },
   });
   if (!socio || socio.role !== "MEMBER") {
@@ -172,7 +174,7 @@ export async function crearRetiroAdminAction(
   }
 
   const geneticas = await prisma.strain.findMany({
-    where: { id: { in: geneticaIds } },
+    where: { id: { in: geneticaIds }, tenantId },
   });
   if (geneticas.length !== geneticaIds.length) {
     return { error: "Una variedad seleccionada no está disponible." };
@@ -186,6 +188,7 @@ export async function crearRetiroAdminAction(
   );
   const retirosDelMes = await prisma.withdrawal.findMany({
     where: {
+      tenantId,
       userId: socio.id,
       date: { gte: inicioMes, lt: inicioMesSiguiente },
       status: { notIn: ["REJECTED", "CANCELLED"] },
@@ -207,6 +210,7 @@ export async function crearRetiroAdminAction(
     const created = await prisma.$transaction(async (tx) => {
       const w = await tx.withdrawal.create({
         data: {
+          tenantId,
           userId: socio.id,
           date: fechaDate,
           timeSlot,
@@ -214,13 +218,14 @@ export async function crearRetiroAdminAction(
           notes: notes ? String(notes) : null,
           items: {
             create: validItems.map((i) => ({
+              tenantId,
               strainId: i.strainId,
               amount: i.amount,
             })),
           },
         },
       });
-      await reserveForWithdrawal(tx, w.id);
+      await reserveForWithdrawal(tx, w.id, tenantId);
       return w;
     });
 

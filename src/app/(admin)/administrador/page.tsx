@@ -13,6 +13,7 @@ export default async function AdminHome() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
+  const tenantId = session!.user.tenantId;
   const puedeVerSocios = can(session, "socios:manage");
   const puedeVerRetiros = can(session, "retiros:manage");
   const puedeVerGeneticas = can(session, "geneticas:manage");
@@ -27,19 +28,22 @@ export default async function AdminHome() {
     stockAgg,
   ] = await Promise.all([
     puedeVerSocios
-      ? prisma.user.count({ where: { role: "MEMBER", active: true } })
+      ? prisma.user.count({ where: { tenantId, role: "MEMBER", active: true } })
       : Promise.resolve(0),
     puedeVerRetiros
       ? prisma.withdrawal.count({
-          where: { status: { in: ["PENDING", "APPROVED"] } },
+          where: { tenantId, status: { in: ["PENDING", "APPROVED"] } },
         })
       : Promise.resolve(0),
     puedeVerRetiros
-      ? prisma.withdrawal.count({ where: { date: { gte: today, lt: tomorrow } } })
+      ? prisma.withdrawal.count({
+          where: { tenantId, date: { gte: today, lt: tomorrow } },
+        })
       : Promise.resolve(0),
     puedeVerRetiros
       ? prisma.withdrawal.findMany({
           where: {
+            tenantId,
             date: { gte: today },
             status: { in: ["PENDING", "APPROVED"] },
           },
@@ -54,7 +58,7 @@ export default async function AdminHome() {
     puedeVerGeneticas
       ? prisma.containerItem
           .findMany({
-            where: { currentWeight: { gt: 0 } },
+            where: { tenantId, currentWeight: { gt: 0 } },
             select: { strainId: true },
             distinct: ["strainId"],
           })
@@ -62,6 +66,7 @@ export default async function AdminHome() {
       : Promise.resolve(0),
     puedeVerContainers
       ? prisma.containerItem.aggregate({
+          where: { tenantId },
           _sum: { currentWeight: true },
         })
       : Promise.resolve({ _sum: { currentWeight: null } }),

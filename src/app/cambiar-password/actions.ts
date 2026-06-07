@@ -21,6 +21,7 @@ export async function cambiarPasswordAction(
 ): Promise<CambiarPasswordState> {
   const session = await auth();
   if (!session) return { error: "No autenticado." };
+  const tenantId = session.user.tenantId;
 
   const parsed = cambiarPasswordSchema.safeParse({
     actual: String(formData.get("current") ?? ""),
@@ -40,6 +41,7 @@ export async function cambiarPasswordAction(
   const since = new Date(Date.now() - PASSWORD_CHANGE_WINDOW_MIN * 60_000);
   const recentFails = await prisma.auditLog.count({
     where: {
+      tenantId,
       userId: session.user.id,
       action: "auth.password_change.fail",
       createdAt: { gte: since },
@@ -51,8 +53,8 @@ export async function cambiarPasswordAction(
 
   const { actual, nueva } = parsed.data;
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+  const user = await prisma.user.findFirst({
+    where: { id: session.user.id, tenantId },
   });
   if (!user) return { error: "Usuario no encontrado." };
 
@@ -68,7 +70,7 @@ export async function cambiarPasswordAction(
 
   const passwordHash = await bcrypt.hash(nueva, 12);
   await prisma.user.update({
-    where: { id: user.id },
+    where: { id: user.id, tenantId },
     data: { passwordHash, mustChangePassword: false },
   });
   await audit({

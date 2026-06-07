@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { postulacionSchema } from "@/lib/validators";
+import { requireTenant } from "@/lib/tenant";
 
 export type PostulacionFormState = {
   error?: string;
@@ -32,13 +33,17 @@ export async function crearPostulacionAction(
 
   const { name, email, phone, message } = parsed.data;
 
-  const yaEsSocio = await prisma.user.findUnique({ where: { email } });
+  const tenant = await requireTenant();
+
+  const yaEsSocio = await prisma.user.findUnique({
+    where: { tenantId_email: { tenantId: tenant.id, email } },
+  });
   if (yaEsSocio) {
     return { fieldErrors: { email: "Ese email ya pertenece a un socio." } };
   }
 
   const pendiente = await prisma.application.findFirst({
-    where: { email, status: "PENDING" },
+    where: { tenantId: tenant.id, email, status: "PENDING" },
   });
   if (pendiente) {
     return {
@@ -50,6 +55,7 @@ export async function crearPostulacionAction(
 
   await prisma.application.create({
     data: {
+      tenantId: tenant.id,
       name,
       email,
       phone: phone || null,

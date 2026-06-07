@@ -2,6 +2,7 @@ import { Link } from "@/components/progress/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { PhotoCarousel } from "@/components/photo-carousel";
+import { requireTenant } from "@/lib/tenant";
 
 export const metadata = { title: "Genética" };
 
@@ -9,7 +10,10 @@ type Params = Promise<{ code: string }>;
 
 export default async function GeneticaPage({ params }: { params: Params }) {
   const { code } = await params;
-  const g = await prisma.strain.findUnique({ where: { code } });
+  const tenant = await requireTenant();
+  const g = await prisma.strain.findUnique({
+    where: { tenantId_code: { tenantId: tenant.id, code } },
+  });
   if (!g) notFound();
 
   return (

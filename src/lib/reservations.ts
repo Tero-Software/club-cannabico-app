@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 
 export class InsufficientStockError extends Error {
@@ -18,11 +17,12 @@ type Tx = Prisma.TransactionClient;
 async function availableByContainerItem(
   tx: Tx,
   containerItemIds: string[],
+  tenantId: string,
 ): Promise<Map<string, number>> {
   if (containerItemIds.length === 0) return new Map();
   const rows = await tx.reservation.groupBy({
     by: ["containerItemId"],
-    where: { containerItemId: { in: containerItemIds } },
+    where: { tenantId, containerItemId: { in: containerItemIds } },
     _sum: { amount: true },
   });
   const map = new Map<string, number>();
@@ -37,20 +37,22 @@ async function availableByContainerItem(
 export async function reserveForWithdrawal(
   tx: Tx,
   withdrawalId: string,
+  tenantId: string,
 ): Promise<void> {
   const items = await tx.withdrawalItem.findMany({
-    where: { withdrawalId },
+    where: { withdrawalId, tenantId },
     include: { strain: true },
   });
 
   for (const item of items) {
     const existing = await tx.reservation.findFirst({
-      where: { withdrawalItemId: item.id },
+      where: { withdrawalItemId: item.id, tenantId },
     });
     if (existing) continue;
 
     const candidates = await tx.containerItem.findMany({
       where: {
+        tenantId,
         strainId: item.strainId,
         container: { active: true },
         currentWeight: { gt: 0 },
@@ -60,6 +62,7 @@ export async function reserveForWithdrawal(
     const reservedMap = await availableByContainerItem(
       tx,
       candidates.map((c) => c.id),
+      tenantId,
     );
 
     const free = candidates
@@ -85,6 +88,7 @@ export async function reserveForWithdrawal(
       const take = Math.min(c.free, remaining);
       await tx.reservation.create({
         data: {
+          tenantId,
           containerItemId: c.id,
           withdrawalItemId: item.id,
           amount: take,
@@ -99,9 +103,10 @@ export async function reserveForWithdrawal(
 export async function releaseReservationsForWithdrawal(
   tx: Tx,
   withdrawalId: string,
+  tenantId: string,
 ): Promise<void> {
   await tx.reservation.deleteMany({
-    where: { withdrawalItem: { withdrawalId } },
+    where: { tenantId, withdrawalItem: { withdrawalId } },
   });
 }
 
@@ -112,14 +117,16 @@ export async function releaseReservationsForWithdrawal(
 export async function consumeReservationsForWithdrawal(
   tx: Tx,
   withdrawalId: string,
+  tenantId: string,
 ): Promise<void> {
   const reservations = await tx.reservation.findMany({
-    where: { withdrawalItem: { withdrawalId } },
+    where: { tenantId, withdrawalItem: { withdrawalId } },
   });
 
   for (const r of reservations) {
     await tx.movement.create({
       data: {
+        tenantId,
         containerItemId: r.containerItemId,
         withdrawalItemId: r.withdrawalItemId,
         type: "OUT",

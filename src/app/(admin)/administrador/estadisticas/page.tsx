@@ -38,9 +38,10 @@ export default async function EstadisticasPage() {
   const lastMonthStart = startOfMonth(subMonths(now, 1));
   const lastMonthEnd = endOfMonth(subMonths(now, 1));
 
+  const tenantId = session!.user.tenantId;
   const [withdrawals12m, activeMembers] = await Promise.all([
     prisma.withdrawal.findMany({
-      where: { status: "COMPLETED", date: { gte: twelveMonthsAgo } },
+      where: { tenantId, status: "COMPLETED", date: { gte: twelveMonthsAgo } },
       select: {
         date: true,
         userId: true,
@@ -55,7 +56,7 @@ export default async function EstadisticasPage() {
       },
     }),
     prisma.user.findMany({
-      where: { role: "MEMBER", active: true },
+      where: { tenantId, role: "MEMBER", active: true },
       select: { createdAt: true },
     }),
   ]);

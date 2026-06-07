@@ -3,14 +3,17 @@ import { Link } from "@/components/progress/link";
 
 export function Logo({
   href = "/",
+  name,
   showUruguay = false,
   hideText = false,
 }: {
   href?: string;
+  /** Nombre a mostrar. Si no se pasa, cae al nombre de la app (env). */
+  name?: string;
   showUruguay?: boolean;
   hideText?: boolean;
 }) {
-  const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
+  const appName = name ?? process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
   return (
     <Link href={href} className="flex items-center gap-3 font-semibold transition-transform active:scale-[0.95]">
       <Image
@@ -24,7 +27,7 @@ export function Logo({
       {!hideText && (
         <span className="flex flex-col leading-tight">
           <span className="font-medium tracking-[0.2em] text-sm text-[var(--foreground)]">
-            CLUB CANNÁBICO APP
+            {appName.toUpperCase()}
           </span>
           {showUruguay && (
             <span className="text-[0.6rem] text-[var(--muted-foreground)] tracking-[0.3em]">

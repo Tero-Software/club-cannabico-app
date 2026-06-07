@@ -8,30 +8,39 @@ export type ClubConfig = {
   minGramosRetiro: number;
   minGramosPorVariedad: number;
   multiploGramos: number;
+  maxSocios: number;
 };
 
-const TAG = "club-config";
+function tagFor(tenantId: string) {
+  return `club-config:${tenantId}`;
+}
 
-export const getClubConfig = unstable_cache(
-  async (): Promise<ClubConfig> => {
-    const row = await prisma.clubConfig.upsert({
-      where: { id: "singleton" },
-      update: {},
-      create: { id: "singleton" },
-    });
-    return {
-      diasHabiles: row.workingDays,
-      horarios: row.timeSlots,
-      maxGramosMes: row.maxGramsPerMonth,
-      minGramosRetiro: row.minGramsPerWithdrawal,
-      minGramosPorVariedad: row.minGramsPerStrain,
-      multiploGramos: row.gramsStep,
-    };
-  },
-  ["club-config"],
-  { tags: [TAG] },
-);
+/**
+ * Config operativa de un tenant, cacheada por tenantId. La config vive en
+ * el propio Tenant (antes era el singleton ClubConfig).
+ */
+export function getClubConfig(tenantId: string): Promise<ClubConfig> {
+  const cached = unstable_cache(
+    async (): Promise<ClubConfig> => {
+      const t = await prisma.tenant.findUniqueOrThrow({
+        where: { id: tenantId },
+      });
+      return {
+        diasHabiles: t.workingDays,
+        horarios: t.timeSlots,
+        maxGramosMes: t.maxGramsPerMonth,
+        minGramosRetiro: t.minGramsPerWithdrawal,
+        minGramosPorVariedad: t.minGramsPerStrain,
+        multiploGramos: t.gramsStep,
+        maxSocios: t.maxActiveMembers,
+      };
+    },
+    ["club-config", tenantId],
+    { tags: [tagFor(tenantId)] },
+  );
+  return cached();
+}
 
-export function invalidateClubConfig() {
-  revalidateTag(TAG, "default");
+export function invalidateClubConfig(tenantId: string) {
+  revalidateTag(tagFor(tenantId), "default");
 }

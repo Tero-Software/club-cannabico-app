@@ -7,10 +7,12 @@ export const metadata = { title: "Agendar retiro" };
 
 export default async function NuevoRetiroPage() {
   const session = await auth();
-  const config = await getClubConfig();
+  const tenantId = session!.user.tenantId;
+  const config = await getClubConfig(tenantId);
   // Derive available strains from active containers with stock
   const containerItems = await prisma.containerItem.findMany({
     where: {
+      tenantId,
       container: { active: true },
       currentWeight: { gt: 0 },
     },
@@ -50,6 +52,7 @@ export default async function NuevoRetiroPage() {
   const inicioMesSiguiente = new Date(now.getFullYear(), now.getMonth() + 1, 1);
   const retirosMes = await prisma.withdrawal.findMany({
     where: {
+      tenantId,
       userId: session!.user.id,
       date: { gte: inicioMes, lt: inicioMesSiguiente },
       status: { notIn: ["REJECTED", "CANCELLED"] },

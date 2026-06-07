@@ -1,4 +1,4 @@
-// El Gordito Club - Prisma Schema
+// Club Cannábico App - Prisma Schema
 
 generator client {
   provider = "prisma-client"
@@ -40,9 +40,48 @@ enum MovementType {
   OUT
 }
 
+model Tenant {
+  id                    String   @id @default(cuid())
+  slug                  String   @unique
+  name                  String
+  active                Boolean  @default(true)
+  // Presentación pública (landing del club). Editable desde configuración.
+  // Base para un editor de landing más completo a futuro.
+  city                  String?
+  tagline               String?
+  description           String?
+  // Config operativa (antes ClubConfig singleton)
+  workingDays           Int[]    @default([1, 2, 3, 4, 5])
+  timeSlots             String[] @default(["18:00-19:00", "19:00-20:00"])
+  maxGramsPerMonth      Int      @default(40)
+  minGramsPerWithdrawal Int      @default(20)
+  minGramsPerStrain     Int      @default(10)
+  gramsStep             Int      @default(10)
+  maxActiveMembers      Int      @default(45)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  users           User[]
+  visitorInvites  VisitorInvite[]
+  loginAttempts   LoginAttempt[]
+  auditLogs       AuditLog[]
+  strains         Strain[]
+  withdrawals     Withdrawal[]
+  withdrawalItems WithdrawalItem[]
+  reservations    Reservation[]
+  containers      Container[]
+  containerItems  ContainerItem[]
+  movements       Movement[]
+  applications    Application[]
+
+  @@index([slug])
+}
+
 model User {
   id                 String    @id @default(cuid())
-  email              String    @unique
+  tenantId           String
+  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  email              String
   passwordHash       String
   name               String
   phone              String?
@@ -63,11 +102,15 @@ model User {
   auditLogs          AuditLog[]
   visitorInvites     VisitorInvite[]
 
+  @@unique([tenantId, email])
+  @@index([tenantId])
   @@index([email])
 }
 
 model VisitorInvite {
   id         String    @id @default(cuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   token      String    @unique
   expiresAt  DateTime
   usedAt     DateTime?
@@ -76,23 +119,29 @@ model VisitorInvite {
   createdBy  String
   createdAt  DateTime  @default(now())
 
+  @@index([tenantId])
   @@index([expiresAt])
   @@map("InvitacionVisitante")
 }
 
 model LoginAttempt {
   id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   email     String
   ip        String?
   success   Boolean
   createdAt DateTime @default(now())
 
+  @@index([tenantId])
   @@index([email, createdAt])
   @@index([ip, createdAt])
 }
 
 model AuditLog {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId     String?
   user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   actorEmail String?
@@ -104,6 +153,7 @@ model AuditLog {
   userAgent  String?
   createdAt  DateTime @default(now())
 
+  @@index([tenantId, createdAt])
   @@index([userId, createdAt])
   @@index([action, createdAt])
   @@index([createdAt])
@@ -111,7 +161,9 @@ model AuditLog {
 
 model Strain {
   id             String          @id @default(cuid())
-  code           String?         @unique
+  tenantId       String
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code           String?
   name           String
   bank           String?
   description    String?
@@ -122,11 +174,15 @@ model Strain {
   withdrawalItems WithdrawalItem[]
   containerItems ContainerItem[]
 
+  @@unique([tenantId, code])
+  @@index([tenantId])
   @@map("Genetica")
 }
 
 model Withdrawal {
   id        String           @id @default(cuid())
+  tenantId  String
+  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userId    String
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   date      DateTime         @map("fecha")
@@ -137,6 +193,7 @@ model Withdrawal {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
+  @@index([tenantId])
   @@index([userId])
   @@index([date])
   @@index([status])
@@ -145,6 +202,8 @@ model Withdrawal {
 
 model WithdrawalItem {
   id         String     @id @default(cuid())
+  tenantId   String
+  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   withdrawalId String   @map("retiroId")
   withdrawal Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
   strainId   String     @map("geneticaId")
@@ -153,6 +212,7 @@ model WithdrawalItem {
   movements  Movement[]
   reservations Reservation[]
 
+  @@index([tenantId])
   @@index([withdrawalId])
   @@index([strainId])
   @@map("RetiroItem")
@@ -160,6 +220,8 @@ model WithdrawalItem {
 
 model Reservation {
   id               String         @id @default(cuid())
+  tenantId         String
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   containerItemId  String
   containerItem    ContainerItem  @relation(fields: [containerItemId], references: [id], onDelete: Cascade)
   withdrawalItemId String
@@ -167,22 +229,30 @@ model Reservation {
   amount           Float
   createdAt        DateTime       @default(now())
 
+  @@index([tenantId])
   @@index([containerItemId])
   @@index([withdrawalItemId])
 }
 
 model Container {
   id        String          @id @default(cuid())
-  number    Int             @unique
+  tenantId  String
+  tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number    Int
   notes     String?
   active    Boolean         @default(false)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   items     ContainerItem[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId])
 }
 
 model ContainerItem {
   id            String     @id @default(cuid())
+  tenantId      String
+  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   containerId   String
   container     Container  @relation(fields: [containerId], references: [id], onDelete: Cascade)
   strainId      String?
@@ -195,12 +265,15 @@ model ContainerItem {
   movements     Movement[]
   reservations  Reservation[]
 
+  @@index([tenantId])
   @@index([containerId])
   @@index([strainId])
 }
 
 model Movement {
   id              String        @id @default(cuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   containerItemId String
   containerItem   ContainerItem @relation(fields: [containerItemId], references: [id], onDelete: Cascade)
   type            MovementType
@@ -210,23 +283,15 @@ model Movement {
   notes           String?
   createdAt       DateTime      @default(now())
 
+  @@index([tenantId])
   @@index([containerItemId, createdAt])
   @@index([withdrawalItemId])
 }
 
-model ClubConfig {
-  id                   String   @id @default("singleton")
-  workingDays          Int[]    @default([1, 2, 3, 4, 5])
-  timeSlots            String[] @default(["18:00-19:00", "19:00-20:00"])
-  maxGramsPerMonth     Int      @default(40)
-  minGramsPerWithdrawal Int     @default(20)
-  minGramsPerStrain    Int      @default(10)
-  gramsStep            Int      @default(10)
-  updatedAt            DateTime @updatedAt
-}
-
 model Application {
   id         String            @id @default(cuid())
+  tenantId   String
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name       String            @map("nombre")
   email      String
   phone      String?           @map("telefono")
@@ -236,6 +301,7 @@ model Application {
   createdAt  DateTime          @default(now())
   updatedAt  DateTime          @updatedAt
 
+  @@index([tenantId])
   @@index([email])
   @@index([status])
   @@index([createdAt])

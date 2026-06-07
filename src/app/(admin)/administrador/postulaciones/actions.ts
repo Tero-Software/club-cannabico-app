@@ -27,24 +27,34 @@ export async function aprobarPostulacionAction(
   const id = formData.get("id");
   if (typeof id !== "string") return { error: "ID inválido" };
 
-  const postulacion = await prisma.application.findUnique({ where: { id } });
+  const tenantId = session.user.tenantId;
+
+  const postulacion = await prisma.application.findFirst({
+    where: { id, tenantId },
+  });
   if (!postulacion) return { error: "Postulación no encontrada" };
   if (postulacion.status !== "PENDING") {
     return { error: "La postulación ya fue resuelta" };
   }
 
   const existente = await prisma.user.findUnique({
-    where: { email: postulacion.email },
+    where: { tenantId_email: { tenantId, email: postulacion.email } },
   });
   if (existente) {
     return { error: "Ya existe un socio con ese email" };
   }
 
-  const socioCount = await prisma.user.count({
-    where: { role: "MEMBER", active: true },
+  const tenant = await prisma.tenant.findUniqueOrThrow({
+    where: { id: tenantId },
+    select: { maxActiveMembers: true },
   });
-  if (socioCount >= 45) {
-    return { error: "El club ya tiene 45 socios activos" };
+  const socioCount = await prisma.user.count({
+    where: { tenantId, role: "MEMBER", active: true },
+  });
+  if (socioCount >= tenant.maxActiveMembers) {
+    return {
+      error: `El club alcanzó el máximo de ${tenant.maxActiveMembers} socios activos`,
+    };
   }
 
   const passwordTemporal = crypto.randomBytes(9).toString("base64url");
@@ -53,6 +63,7 @@ export async function aprobarPostulacionAction(
   const [createdUser] = await prisma.$transaction([
     prisma.user.create({
       data: {
+        tenantId,
         name: postulacion.name,
         email: postulacion.email,
         phone: postulacion.phone,
@@ -62,7 +73,7 @@ export async function aprobarPostulacionAction(
       },
     }),
     prisma.application.update({
-      where: { id },
+      where: { id: postulacion.id },
       data: { status: "APPROVED" },
     }),
   ]);
@@ -86,10 +97,11 @@ export async function rechazarPostulacionAction(formData: FormData) {
   const id = formData.get("id");
   if (typeof id !== "string") return;
 
-  await prisma.application.update({
-    where: { id },
+  const res = await prisma.application.updateMany({
+    where: { id, tenantId: session.user.tenantId },
     data: { status: "REJECTED" },
   });
+  if (res.count === 0) return;
   await audit({
     userId: session.user.id,
     actorEmail: session.user.email,
@@ -105,7 +117,10 @@ export async function eliminarPostulacionAction(formData: FormData) {
   const id = formData.get("id");
   if (typeof id !== "string") return;
 
-  await prisma.application.delete({ where: { id } });
+  const res = await prisma.application.deleteMany({
+    where: { id, tenantId: session.user.tenantId },
+  });
+  if (res.count === 0) return;
   await audit({
     userId: session.user.id,
     actorEmail: session.user.email,
