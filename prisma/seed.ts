@@ -90,13 +90,6 @@ async function main() {
     geneticas: loadGeneticas(),
   });
 
-  await seedTenant({
-    slug: "club-test",
-    name: "Club Test",
-    adminEmail: "admin@club-test.local",
-    adminPassword: "Test2026!",
-  });
-
   console.log("✅ Seed completado");
 }
 

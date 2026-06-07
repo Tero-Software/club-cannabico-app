@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'MEMBER', 'VISITANTE');
 
@@ -16,6 +19,9 @@ CREATE TABLE "Tenant" (
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "active" BOOLEAN NOT NULL DEFAULT true,
+    "city" TEXT,
+    "tagline" TEXT,
+    "description" TEXT,
     "workingDays" INTEGER[] DEFAULT ARRAY[1, 2, 3, 4, 5]::INTEGER[],
     "timeSlots" TEXT[] DEFAULT ARRAY['18:00-19:00', '19:00-20:00']::TEXT[],
     "maxGramsPerMonth" INTEGER NOT NULL DEFAULT 40,

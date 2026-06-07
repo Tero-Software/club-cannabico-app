@@ -36,8 +36,8 @@ export default async function ClubHomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
       />
 
-      <section className="max-w-5xl mx-auto px-5 sm:px-6 py-16 sm:py-24 lg:py-32">
-        <div className="max-w-4xl mx-auto">
+      <section className="container-page pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-36">
+        <div className="max-w-3xl">
           <span className="text-[0.65rem] sm:text-xs tracking-[0.3em] text-[var(--muted-foreground)] mb-6 sm:mb-8 block">
             {city ? city.toUpperCase() : "URUGUAY"}
           </span>
