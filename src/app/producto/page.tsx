@@ -112,7 +112,7 @@ export default function ProductoLanding() {
             <div className="max-w-3xl mb-12">
               <div className="h-px w-10 bg-[var(--border)] mb-4" />
               <p className="text-xl sm:text-2xl font-light leading-snug text-balance">
-                Las áreas que un club administra, en una sola plataforma.
+                Todo lo que tu club necesita, en una sola plataforma.
               </p>
             </div>
             <div className="divide-y divide-[var(--border)] border-t border-b border-[var(--border)]">
