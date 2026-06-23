@@ -15,6 +15,19 @@
   --destructive: #a64545;
   --warning: #c8a860;
   --success: #4a7a52;
+  /* Escala de elevación tipo Linear: del canvas a lo elevado, rango estrecho.
+     Las superficies suben en luminosidad de a poco; el borde y la sombra dan
+     la profundidad, no el relleno. */
+  --surface-1: #0e0f0e;
+  --surface-2: #141514;
+  --surface-3: #1a1b1a;
+  --border-subtle: #1b1c1b;
+  --border-strong: #2e302e;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 40px -8px rgba(0, 0, 0, 0.6);
+  /* Glow del acento para heros/realces. Difuso, racionado. */
+  --glow-primary: radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--primary) 22%, transparent) 0%, transparent 70%);
   /* Placeholders pastel para covers de blog (derivados de los accents institucionales) */
   --blog-cover-1: #3a2e2e;
   --blog-cover-2: #3a352a;
@@ -40,6 +53,15 @@ html[data-theme="light"] {
   --blog-cover-1: #e8d5d0;
   --blog-cover-2: #ede4d0;
   --blog-cover-3: #d5e3d8;
+  --surface-1: #ffffff;
+  --surface-2: #f4f2ed;
+  --surface-3: #ebe8e1;
+  --border-subtle: #e4e2dc;
+  --border-strong: #cbc8c0;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 12px 40px -8px rgba(0, 0, 0, 0.14);
+  --glow-primary: radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--primary) 14%, transparent) 0%, transparent 70%);
   color-scheme: light;
 }
 
@@ -260,9 +282,10 @@ input[type="datetime-local"].input {
 
 .card {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-subtle);
   border-radius: 0.75rem;
   padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
 }
 
 .badge {

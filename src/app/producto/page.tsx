@@ -65,44 +65,45 @@ export default function ProductoLanding() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareSchema) }}
       />
 
-      <header className="border-b border-[var(--border)] bg-[var(--card)] sticky top-0 z-10">
+      <header className="border-b border-[var(--border-subtle)] sticky top-0 z-20 backdrop-blur-xl bg-[color-mix(in_oklab,var(--background)_72%,transparent)]">
         <div className="container-page py-4 flex items-center justify-between gap-4">
           <Logo />
           <a
             href={whatsappUrl}
             target="_blank"
             rel="noreferrer"
-            className="btn btn-primary text-sm"
+            className="rounded-full bg-[var(--foreground)] text-[var(--background)] text-sm font-medium px-4 py-2 transition-opacity hover:opacity-90 active:scale-[0.97]"
           >
-            Pedí una demo
+            Inscribite
           </a>
         </div>
       </header>
 
       <main className="flex-1">
-        {/* Hero — el headline dice qué hace el producto, no su nombre. */}
-        <section className="container-page pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-36">
-          <div className="max-w-3xl">
-            <span className="text-[0.65rem] sm:text-xs tracking-[0.3em] text-[var(--muted-foreground)] mb-6 block">
-              URUGUAY
-            </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light leading-[1.15] tracking-tight text-balance">
-              Una app pensada para clubes cannábicos uruguayos.
-            </h1>
-            <p className="mt-6 text-lg sm:text-xl text-[var(--muted-foreground)] leading-relaxed font-light max-w-2xl">
-              Socios, retiros, acopio, trazabilidad y actas de directiva en un
-              solo lugar, con los controles que pide el IRCCA.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center gap-5">
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-primary"
-              >
-                Pedí una demo
-              </a>
+        {/* Hero — glow del acento detrás del titular, racionado (técnica Linear). */}
+        <section className="relative overflow-hidden">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-[600px]"
+            style={{ background: "var(--glow-primary)" }}
+          />
+          <div className="container-page relative pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-36">
+            <div className="max-w-5xl">
+              <span className="text-[0.65rem] sm:text-xs tracking-[0.3em] text-[var(--muted-foreground)] mb-6 block">
+                URUGUAY
+              </span>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium leading-[1.05] tracking-[-0.02em] text-balance">
+                Una app pensada para clubes cannábicos uruguayos.
+              </h1>
+              <p className="mt-6 text-lg sm:text-xl text-[var(--muted-foreground)] leading-relaxed max-w-2xl">
+                Socios, retiros, acopio, trazabilidad y actas de directiva en un
+                solo lugar, con los controles que pide el IRCCA.
+              </p>
             </div>
+
+            {/* TODO: screenshot de la app enmarcada (estilo Linear) va acá,
+                cuando el rediseño de UI esté pronto. No usar captura de la UI
+                actual: es justo lo que se va a cambiar. */}
           </div>
         </section>
 
@@ -110,7 +111,6 @@ export default function ProductoLanding() {
         <section className="border-t border-[var(--border)]">
           <div className="container-page py-14 sm:py-20">
             <div className="max-w-3xl mb-12">
-              <div className="h-px w-10 bg-[var(--border)] mb-4" />
               <p className="text-xl sm:text-2xl font-light leading-snug text-balance">
                 Todo lo que tu club necesita, en una sola plataforma.
               </p>
@@ -128,27 +128,6 @@ export default function ProductoLanding() {
           </div>
         </section>
 
-        {/* CTA final */}
-        <section className="border-t border-[var(--border)]">
-          <div className="container-page py-16 sm:py-24">
-            <div className="max-w-3xl">
-              <p className="text-2xl sm:text-3xl font-light leading-snug text-balance">
-                Te muestro la plataforma con datos de prueba, el panel del club y
-                el del socio.
-              </p>
-              <div className="mt-9 flex flex-wrap items-center gap-5">
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn btn-primary"
-                >
-                  Pedí una demo
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-[var(--border)] py-10 text-sm text-[var(--muted-foreground)]">
