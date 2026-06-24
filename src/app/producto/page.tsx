@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
+import { Reveal } from "@/components/ui/reveal";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://clubcannabico.app";
@@ -97,8 +98,8 @@ export default function ProductoLanding() {
             className="pointer-events-none absolute inset-x-0 top-0 h-[600px]"
             style={{ background: "var(--glow-primary)" }}
           />
-          <div className="container-page relative pt-20 pb-12 sm:pt-28 sm:pb-16 lg:pt-36">
-            <div className="max-w-5xl">
+          <div className="container-page relative pt-20 pb-20 sm:pt-28 sm:pb-28 lg:pt-36">
+            <div className="max-w-5xl hero-stagger">
               <span className="text-[0.65rem] sm:text-xs tracking-[0.3em] text-[var(--muted-foreground)] mb-6 block">
                 URUGUAY
               </span>
@@ -116,7 +117,7 @@ export default function ProductoLanding() {
         {/* Screenshot del producto enmarcado como una card de la app: borde
             sutil y esquinas redondeadas en los cuatro lados, imagen completa. */}
         <div className="container-page relative pb-16 sm:pb-24">
-          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] shadow-[var(--shadow-lg)] overflow-hidden">
+          <Reveal className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] shadow-[var(--shadow-lg)] overflow-hidden">
             <Image
               src="/portada-hero.png"
               alt="Vista del panel de administración de la app"
@@ -125,25 +126,25 @@ export default function ProductoLanding() {
               priority
               className="block w-full h-auto"
             />
-          </div>
+          </Reveal>
         </div>
 
         {/* Áreas de la app, descritas por lo que hacen. */}
         <section className="border-t border-[var(--border)]">
           <div className="container-page py-14 sm:py-20">
-            <div className="max-w-3xl mb-12">
+            <Reveal className="max-w-3xl mb-12">
               <p className="text-xl sm:text-2xl font-light leading-snug text-balance">
                 Todo lo que tu club necesita, en una sola plataforma.
               </p>
-            </div>
+            </Reveal>
             <div className="divide-y divide-[var(--border)] border-t border-b border-[var(--border)]">
-              {FEATURES.map((f) => (
-                <div key={f.titulo} className="py-7 max-w-2xl">
+              {FEATURES.map((f, i) => (
+                <Reveal key={f.titulo} delay={i * 80} className="py-7 max-w-2xl">
                   <h3 className="text-lg font-medium mb-2">{f.titulo}</h3>
                   <p className="text-base text-[var(--muted-foreground)] leading-relaxed font-light">
                     {f.body}
                   </p>
-                </div>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -157,7 +158,7 @@ export default function ProductoLanding() {
             className="pointer-events-none absolute inset-x-0 bottom-0 h-[500px]"
             style={{ background: "var(--glow-primary)", transform: "scaleY(-1)" }}
           />
-          <div className="container-page relative py-24 sm:py-36 text-center">
+          <Reveal className="container-page relative py-24 sm:py-36 text-center">
             <h2 className="text-3xl sm:text-5xl font-medium leading-[1.05] tracking-[-0.02em] text-balance max-w-3xl mx-auto">
               Pensada para hoy. Lista para lo que viene.
             </h2>
@@ -181,7 +182,7 @@ export default function ProductoLanding() {
                 Contactanos
               </a>
             </div>
-          </div>
+          </Reveal>
         </section>
       </main>
 

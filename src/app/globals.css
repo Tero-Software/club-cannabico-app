@@ -231,6 +231,61 @@ html {
   animation: subtle-pulse 2.4s ease-in-out infinite;
 }
 
+/* Scroll-reveal (técnica del landing de Linear): el bloque arranca atenuado y
+   apenas desplazado hacia abajo, y al entrar al viewport sube y aparece. El
+   disparo lo hace un IntersectionObserver que agrega [data-revealed]. */
+/* Valores tomados del CSS real de Linear: easing ease-out-quad, translateY
+   chico (16px) y duración 0.6s. */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  will-change: opacity, transform;
+}
+[data-reveal][data-revealed] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Entrada del hero al cargar. Valores exactos del landing de Linear
+   (keyframe staggerIn): desplazamiento mínimo (4px), duración 0.4s y easing
+   ease-out-quart, que frena al final y da esa sensación de "asentarse".
+   El stagger entre hijos (eyebrow → título → bajada) lo da animation-delay
+   inline en pasos de 100ms; `backwards` los mantiene invisibles durante el
+   delay para evitar el flash inicial. */
+@keyframes hero-enter {
+  from { opacity: 0; transform: translateY(4px); filter: blur(8px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+.hero-enter {
+  /* ease-out-quart de Linear. */
+  animation: hero-enter 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) backwards;
+}
+/* Hijos escalonados del hero: cada uno entra 100ms después del anterior. */
+.hero-stagger > * {
+  animation: hero-enter 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) backwards;
+}
+.hero-stagger > :nth-child(1) { animation-delay: 0.1s; }
+.hero-stagger > :nth-child(2) { animation-delay: 0.2s; }
+.hero-stagger > :nth-child(3) { animation-delay: 0.3s; }
+.hero-stagger > :nth-child(4) { animation-delay: 0.4s; }
+
+/* Accesibilidad: sin animación si el usuario la desactiva. */
+@media (prefers-reduced-motion: reduce) {
+  [data-reveal],
+  [data-reveal][data-revealed],
+  .hero-enter,
+  .hero-stagger > * {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    animation: none;
+    transition: none;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
