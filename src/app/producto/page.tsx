@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
@@ -69,14 +70,22 @@ export default function ProductoLanding() {
       <header className="border-b border-[var(--border-subtle)] sticky top-0 z-20 backdrop-blur-xl bg-[color-mix(in_oklab,var(--background)_72%,transparent)]">
         <div className="container-page py-4 flex items-center justify-between gap-4">
           <Logo showUruguay />
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full bg-[var(--foreground)] text-[var(--background)] text-sm font-medium px-4 py-2 transition-opacity hover:opacity-90 active:scale-[0.97]"
-          >
-            Inscribite
-          </a>
+          <nav className="flex items-center gap-5 text-sm">
+            <Link
+              href="/pricing"
+              className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+            >
+              Precios
+            </Link>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full bg-[var(--foreground)] text-[var(--background)] font-medium px-4 py-2 transition-opacity hover:opacity-90 active:scale-[0.97]"
+            >
+              Inscribite
+            </a>
+          </nav>
         </div>
       </header>
 
@@ -180,6 +189,7 @@ export default function ProductoLanding() {
         <div className="container-page flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between text-sm">
           <nav className="flex items-center gap-6">
             <FooterLink href="/producto">Inicio</FooterLink>
+            <FooterLink href="/pricing">Precios</FooterLink>
             <FooterLink href="/marco-legal">Marco legal</FooterLink>
             <FooterLink href="/contacto">Contacto</FooterLink>
             <FooterLink href="/login">Ingresar</FooterLink>
