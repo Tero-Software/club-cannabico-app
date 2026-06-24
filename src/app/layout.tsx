@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import { cookies } from "next/headers";
-import { ProgressBar, ProgressBarProvider } from "@/components/progress/provider";
+import { ProgressBar } from "@/components/ui/progress-bar";
 import "./globals.css";
 
-const geistSans = Geist({
+// Inter Variable: la familia de Linear. Mantiene el nombre de variable previo
+// (--font-geist-sans) para no tocar el resto de la cadena de estilos.
+const geistSans = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  axes: ["opsz"],
 });
 
 const geistMono = Geist_Mono({
@@ -72,10 +75,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <ProgressBarProvider>
-          <ProgressBar />
-          {children}
-        </ProgressBarProvider>
+        <ProgressBar>{children}</ProgressBar>
       </body>
     </html>
   );

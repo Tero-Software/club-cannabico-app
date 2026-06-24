@@ -4,8 +4,8 @@ import Image from "next/image";
 import { useState, useTransition } from "react";
 import { updateProductoAction, deleteProductoAction } from "./actions";
 import { PhotosEditor } from "./photos-editor";
-import { ConfirmButton } from "@/components/confirm-button";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { ConfirmButton } from "@/components/ui/confirm-button";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export type Genetica = {
   id: string;

@@ -54,7 +54,7 @@ export async function reserveForWithdrawal(
       where: {
         tenantId,
         strainId: item.strainId,
-        container: { active: true },
+        active: true,
         currentWeight: { gt: 0 },
       },
     });

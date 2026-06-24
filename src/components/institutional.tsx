@@ -1,4 +1,4 @@
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://clubcannabico.app";
 

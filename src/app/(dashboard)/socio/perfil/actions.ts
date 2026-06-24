@@ -26,13 +26,15 @@ export async function updatePerfilAction(
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos" };
   }
 
-  const before = await prisma.user.findUnique({
-    where: { id: session.user.id },
+  const tenantId = session.user.tenantId;
+
+  const before = await prisma.user.findFirst({
+    where: { id: session.user.id, tenantId },
     select: { name: true, phone: true },
   });
 
   await prisma.user.update({
-    where: { id: session.user.id },
+    where: { id: session.user.id, tenantId },
     data: {
       name: parsed.data.name,
       phone: parsed.data.phone || null,

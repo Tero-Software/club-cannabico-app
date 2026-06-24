@@ -1,17 +1,20 @@
 import Image from "next/image";
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 
 export function Logo({
   href = "/",
   name,
   showUruguay = false,
   hideText = false,
+  size = 44,
 }: {
   href?: string;
   /** Nombre a mostrar. Si no se pasa, cae al nombre de la app (env). */
   name?: string;
   showUruguay?: boolean;
   hideText?: boolean;
+  /** Lado del ícono en px. Por defecto 44 (navbar público). */
+  size?: number;
 }) {
   const appName = name ?? process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
   return (
@@ -19,8 +22,8 @@ export function Logo({
       <Image
         src="/logo.png"
         alt={appName}
-        width={44}
-        height={44}
+        width={size}
+        height={size}
         className="rounded-full object-cover"
         priority
       />

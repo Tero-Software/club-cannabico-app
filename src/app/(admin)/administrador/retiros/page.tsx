@@ -1,4 +1,4 @@
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -56,7 +56,7 @@ export default async function AdminRetirosPage({
       orderBy: { name: "asc" },
     }),
     prisma.containerItem.findMany({
-      where: { tenantId, container: { active: true }, currentWeight: { gt: 0 } },
+      where: { tenantId, active: true, currentWeight: { gt: 0 } },
       include: {
         strain: { select: { id: true, name: true } },
         reservations: { select: { amount: true } },

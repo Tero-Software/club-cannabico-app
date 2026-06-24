@@ -6,10 +6,10 @@ import {
   addContainerItemAction,
   addMovementAction,
   deleteContainerItemAction,
-  toggleContainerActiveAction,
+  toggleContainerItemActiveAction,
   updateContainerAction,
 } from "./actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export type Movement = {
   id: string;
@@ -26,6 +26,7 @@ export type Item = {
   plantNumber: string | null;
   initialWeight: number;
   currentWeight: number;
+  active: boolean;
   reservedAmount: number;
   movements: Movement[];
 };
@@ -34,7 +35,6 @@ export type Container = {
   id: string;
   number: number;
   notes: string | null;
-  active: boolean;
   items: Item[];
 };
 
@@ -68,8 +68,8 @@ export function ContainersList({
     : containers;
 
   return (
-    <div className="flex flex-col gap-px">
-      <div className="hidden sm:grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-3 px-4 py-2 text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
+    <div>
+      <div className="hidden sm:grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-3 px-5 py-2 text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
         <span>#</span>
         <span>Contenido</span>
         <span className="text-right">Reservado</span>
@@ -78,19 +78,21 @@ export function ContainersList({
         <span className="text-right">Estado</span>
       </div>
       {filtered.length === 0 ? (
-        <div className="px-4 py-6 text-sm text-[var(--muted-foreground)] text-center border border-[var(--border)] bg-[var(--card)]">
+        <div className="card px-5 py-6 text-sm text-[var(--muted-foreground)] text-center">
           Sin resultados para "{query}".
         </div>
       ) : (
-        filtered.map((c) => (
-          <ContainerRow
-            key={c.id}
-            container={c}
-            strains={strains}
-            expanded={expandedId === c.id}
-            onToggle={() => setExpandedId((prev) => (prev === c.id ? null : c.id))}
-          />
-        ))
+        <div className="card p-0 overflow-hidden">
+          {filtered.map((c) => (
+            <ContainerRow
+              key={c.id}
+              container={c}
+              strains={strains}
+              expanded={expandedId === c.id}
+              onToggle={() => setExpandedId((prev) => (prev === c.id ? null : c.id))}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
@@ -107,87 +109,72 @@ function ContainerRow({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const [pending, startTransition] = useTransition();
-  const currentTotal = c.items.reduce((s, i) => s + i.currentWeight, 0);
-  const initialTotal = c.items.reduce((s, i) => s + i.initialWeight, 0);
-  const reservedTotal = c.items.reduce((s, i) => s + i.reservedAmount, 0);
-  const freeTotal = Math.max(0, currentTotal - reservedTotal);
-  const locked = c.active && reservedTotal > 0 && freeTotal <= 0;
-  const contents = c.items.map((i) => {
-    const plant = formatPlant(i.plantNumber);
-    return plant ? `${i.strainName} · ${plant}` : i.strainName;
-  });
+  const single = c.items.length <= 1;
 
-  function handleToggleActive(e: React.MouseEvent) {
-    e.stopPropagation();
-    const fd = new FormData();
-    fd.set("id", c.id);
-    fd.set("active", String(c.active));
-    startTransition(() => toggleContainerActiveAction(fd));
+  function itemLocked(item: Item) {
+    const free = Math.max(0, item.currentWeight - item.reservedAmount);
+    return item.active && item.reservedAmount > 0 && free <= 0;
   }
 
   return (
-    <div
-      className={`bg-[var(--card)] border ${
-        locked
-          ? "border-[var(--destructive)]"
-          : "border-[var(--border)]"
-      }`}
-    >
+    <div className="border-t border-[var(--border-subtle)] first-of-type:border-t-0">
       <button
         type="button"
         onClick={onToggle}
-        className={`w-full grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-1 sm:gap-3 px-4 py-3 hover:bg-[var(--muted)] transition-colors text-left ${
-          !c.active ? "opacity-60" : ""
-        }`}
+        className="w-full text-left"
       >
-        <span className="font-bold tabular-nums">{c.number}</span>
-        <span className="text-sm truncate">
-          {contents.length > 0 ? contents.join(", ") : "Vacío"}
-          {locked && (
-            <span className="ml-2 text-xs text-[var(--destructive)] font-semibold">
-              ⚠ No tocar
-            </span>
-          )}
-        </span>
-        <span
-          className={`text-sm text-right tabular-nums hidden sm:block ${
-            reservedTotal > 0
-              ? locked
-                ? "text-[var(--destructive)] font-semibold"
-                : "text-[var(--foreground)]"
-              : "text-[var(--muted-foreground)]"
-          }`}
-        >
-          {reservedTotal > 0 ? formatGramos(reservedTotal) : "—"}
-        </span>
-        <span className="text-sm font-medium text-right tabular-nums">
-          {formatGramos(currentTotal)}
-        </span>
-        <span className="text-sm text-[var(--muted-foreground)] text-right tabular-nums hidden sm:block">
-          {formatGramos(initialTotal)}
-        </span>
-        <span className="text-right">
-          {c.active ? (
-            <span className="text-xs text-[var(--primary)]">Activo</span>
-          ) : (
-            <span className="text-xs text-[var(--muted-foreground)]">Inactivo</span>
-          )}
-        </span>
+        {(single ? c.items.slice(0, 1) : c.items).length === 0 ? (
+          <div className="grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-1 sm:gap-3 items-center px-5 py-3 hover:bg-[var(--surface-2)] transition-colors">
+            <span className="font-bold tabular-nums">{c.number}</span>
+            <span className="text-sm text-[var(--muted-foreground)]">Vacío</span>
+          </div>
+        ) : (
+          c.items.map((item, idx) => {
+            const plant = formatPlant(item.plantNumber);
+            const locked = itemLocked(item);
+            return (
+              <div
+                key={item.id}
+                className={`grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-1 sm:gap-3 items-center px-5 py-3 hover:bg-[var(--surface-2)] transition-colors ${
+                  !item.active ? "opacity-60" : ""
+                } ${locked ? "bg-[color-mix(in_oklab,var(--destructive)_8%,transparent)]" : ""} ${
+                  idx > 0 ? "border-t border-[var(--border-subtle)] sm:[border-image:linear-gradient(to_right,transparent_3.5rem,var(--border-subtle)_3.5rem)_1]" : ""
+                }`}
+              >
+                <span className="font-bold tabular-nums">
+                  {idx === 0 ? c.number : ""}
+                </span>
+                <span className="text-sm truncate">
+                  {item.strainName}
+                  {plant && (
+                    <span className="ml-1 text-xs text-[var(--muted-foreground)]">
+                      {plant}
+                    </span>
+                  )}
+                  {locked && (
+                    <span className="ml-2 text-xs text-[var(--destructive)] font-semibold">
+                      ⚠ No tocar
+                    </span>
+                  )}
+                </span>
+                <WeightCols
+                  reserved={item.reservedAmount}
+                  current={item.currentWeight}
+                  initial={item.initialWeight}
+                  locked={locked}
+                />
+                <span className="text-right">
+                  <ContainerState active={item.active} />
+                </span>
+              </div>
+            );
+          })
+        )}
       </button>
 
       {expanded && (
-        <div className="border-t border-[var(--border)] px-4 py-4 bg-[var(--muted)]">
+        <div className="border-t border-[var(--border-subtle)] px-5 py-4 bg-[var(--surface-2)]">
           <div className="flex items-center gap-2 flex-wrap mb-4">
-            <button
-              type="button"
-              onClick={handleToggleActive}
-              className="btn btn-secondary text-xs inline-flex items-center gap-2"
-              disabled={pending}
-            >
-              {pending && <SavingSpinner />}
-              {c.active ? "Desactivar" : "Activar"}
-            </button>
             <NotesEditor containerId={c.id} initialNotes={c.notes} />
           </div>
 
@@ -196,7 +183,7 @@ function ContainerRow({
               Sin items.
             </p>
           ) : (
-            <div className="flex flex-col gap-px mb-3">
+            <div className="card p-0 overflow-hidden mb-3">
               {c.items.map((item) => (
                 <ItemRow key={item.id} item={item} />
               ))}
@@ -207,6 +194,48 @@ function ContainerRow({
         </div>
       )}
     </div>
+  );
+}
+
+function WeightCols({
+  reserved,
+  current,
+  initial,
+  locked,
+}: {
+  reserved: number;
+  current: number;
+  initial: number;
+  locked: boolean;
+}) {
+  return (
+    <>
+      <span
+        className={`text-sm text-right tabular-nums hidden sm:block ${
+          reserved > 0
+            ? locked
+              ? "text-[var(--destructive)] font-semibold"
+              : "text-[var(--foreground)]"
+            : "text-[var(--muted-foreground)]"
+        }`}
+      >
+        {reserved > 0 ? formatGramos(reserved) : "—"}
+      </span>
+      <span className="text-sm font-medium text-right tabular-nums">
+        {formatGramos(current)}
+      </span>
+      <span className="text-sm text-[var(--muted-foreground)] text-right tabular-nums hidden sm:block">
+        {formatGramos(initial)}
+      </span>
+    </>
+  );
+}
+
+function ContainerState({ active }: { active: boolean }) {
+  return active ? (
+    <span className="text-xs text-[var(--primary)]">Activo</span>
+  ) : (
+    <span className="text-xs text-[var(--muted-foreground)]">Inactivo</span>
   );
 }
 
@@ -294,28 +323,44 @@ function ItemRow({ item }: { item: Item }) {
     startTransition(() => deleteContainerItemAction(fd));
   }
 
+  function handleToggleActive() {
+    const fd = new FormData();
+    fd.set("id", item.id);
+    fd.set("active", String(item.active));
+    startTransition(() => toggleContainerItemActiveAction(fd));
+  }
+
   return (
-    <div className="bg-[var(--card)] border border-[var(--border)] px-3 py-2">
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-2 text-sm flex-wrap">
-          <span className="font-medium">{item.strainName}</span>
+    <div className="px-5 py-2.5 border-t border-[var(--border-subtle)] first-of-type:border-t-0">
+      <div className="grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-1 sm:gap-3 items-center">
+        <span className="hidden sm:block" aria-hidden />
+        <span className="flex items-center gap-2 text-sm flex-wrap min-w-0">
+          <span className="font-medium truncate">{item.strainName}</span>
           {formatPlant(item.plantNumber) && (
             <span className="text-xs text-[var(--muted-foreground)]">
               {formatPlant(item.plantNumber)}
             </span>
           )}
-        </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="font-semibold tabular-nums">
-            {formatGramos(item.currentWeight)}
-          </span>
-          <span className="text-xs text-[var(--muted-foreground)] tabular-nums">
-            / {formatGramos(item.initialWeight)}
-          </span>
-        </div>
+        </span>
+        <span
+          className={`text-sm text-right tabular-nums hidden sm:block ${
+            item.reservedAmount > 0
+              ? "text-[var(--destructive)] font-medium"
+              : "text-[var(--muted-foreground)]"
+          }`}
+        >
+          {item.reservedAmount > 0 ? formatGramos(item.reservedAmount) : "—"}
+        </span>
+        <span className="text-sm font-semibold text-right tabular-nums">
+          {formatGramos(item.currentWeight)}
+        </span>
+        <span className="text-sm text-[var(--muted-foreground)] text-right tabular-nums hidden sm:block">
+          {formatGramos(item.initialWeight)}
+        </span>
+        <span className="hidden sm:block" aria-hidden />
       </div>
       {item.reservedAmount > 0 && (
-        <div className="text-xs text-[var(--destructive)] mt-1">
+        <div className="text-xs text-[var(--destructive)] mt-1 sm:hidden">
           Reservado: {formatGramos(item.reservedAmount)} · libre{" "}
           {formatGramos(Math.max(0, item.currentWeight - item.reservedAmount))}
         </div>
@@ -335,6 +380,14 @@ function ItemRow({ item }: { item: Item }) {
         />
       </div>
       <div className="flex gap-2 mt-2 flex-wrap">
+        <button
+          onClick={handleToggleActive}
+          className="btn btn-ghost text-xs px-2 py-0.5 inline-flex items-center gap-2"
+          disabled={pending}
+        >
+          {pending && <SavingSpinner />}
+          {item.active ? "Desactivar" : "Activar"}
+        </button>
         <button
           onClick={() => { setShowAdjust(!showAdjust); setShowHistory(false); }}
           className="btn btn-ghost text-xs px-2 py-0.5"

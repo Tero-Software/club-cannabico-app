@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { NewContainerForm } from "./new-container-form";
 import { ContainersList, type Container, type Strain } from "./containers-list";
 
@@ -35,7 +35,7 @@ export function ContainersPanel({
       </div>
 
       {stats && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">{stats}</div>
+        <div className="grid sm:grid-cols-2 gap-4">{stats}</div>
       )}
 
       <div className="flex items-center justify-between flex-wrap gap-3">

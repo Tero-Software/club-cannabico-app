@@ -5,7 +5,7 @@ import {
   crearPostulacionAction,
   type PostulacionFormState,
 } from "./actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export function PostulacionForm() {
   const [state, action, pending] = useActionState<

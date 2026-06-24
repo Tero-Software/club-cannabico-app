@@ -13,7 +13,7 @@ export default async function NuevoRetiroPage() {
   const containerItems = await prisma.containerItem.findMany({
     where: {
       tenantId,
-      container: { active: true },
+      active: true,
       currentWeight: { gt: 0 },
     },
     include: { strain: true, reservations: true },

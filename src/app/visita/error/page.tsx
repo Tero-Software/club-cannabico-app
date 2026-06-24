@@ -1,4 +1,4 @@
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 
 export const metadata = { title: "Acceso de visitante" };
 

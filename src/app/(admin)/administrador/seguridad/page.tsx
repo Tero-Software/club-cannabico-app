@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { totpUri } from "@/lib/totp";
 import { TotpEnrollClient } from "./enroll-client";
 import { disableTotp } from "./actions";
-import { SubmitWithSpinner } from "@/components/submit-with-spinner";
+import { SubmitWithSpinner } from "@/components/ui/submit-with-spinner";
 
 export const metadata = { title: "Seguridad" };
 

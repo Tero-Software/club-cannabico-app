@@ -6,7 +6,7 @@ import {
   type CambiarPasswordState,
 } from "./actions";
 import { PASSWORD_REQUIREMENTS } from "@/lib/validators";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export function CambiarPasswordForm() {
   const [state, formAction, pending] = useActionState<

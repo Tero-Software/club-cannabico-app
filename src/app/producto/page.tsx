@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/ui/logo";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://clubcannabico.app";

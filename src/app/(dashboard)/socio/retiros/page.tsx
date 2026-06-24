@@ -1,4 +1,4 @@
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { formatDate, formatGramos, estadoLabel, estadoBadgeClass } from "@/lib/format";

@@ -1,4 +1,4 @@
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { PhotoCarousel } from "@/components/photo-carousel";

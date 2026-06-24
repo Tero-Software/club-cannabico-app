@@ -1,10 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { crearRetiroAction, type RetiroFormState } from "../actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 type Genetica = {
   id: string;

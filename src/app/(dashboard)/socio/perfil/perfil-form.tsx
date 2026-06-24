@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { updatePerfilAction } from "./actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export function PerfilForm({
   initialName,

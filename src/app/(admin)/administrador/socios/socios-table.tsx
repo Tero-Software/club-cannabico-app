@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { SocioRowMenu } from "./row-menu";
 

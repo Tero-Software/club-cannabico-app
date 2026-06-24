@@ -1,4 +1,4 @@
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Ingresar" };

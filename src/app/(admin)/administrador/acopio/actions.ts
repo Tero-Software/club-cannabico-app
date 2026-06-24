@@ -101,18 +101,15 @@ export async function updateContainerAction(formData: FormData) {
   if (!before) return;
 
   const nextNotes = String(formData.get("notes") || "") || null;
-  const nextActive = formData.get("active") === "on";
 
   await prisma.container.update({
     where: { id: before.id },
-    data: { notes: nextNotes, active: nextActive },
+    data: { notes: nextNotes },
   });
 
   const changes: Record<string, { from: unknown; to: unknown }> = {};
   if (before.notes !== nextNotes)
     changes.notes = { from: before.notes, to: nextNotes };
-  if (before.active !== nextActive)
-    changes.active = { from: before.active, to: nextActive };
 
   await audit({
     userId: session.user.id,
@@ -126,14 +123,14 @@ export async function updateContainerAction(formData: FormData) {
   revalidatePath("/administrador/acopio");
 }
 
-/* ── Toggle active ────────────────────────────────────── */
+/* ── Toggle active (por item/genética) ────────────────── */
 
-export async function toggleContainerActiveAction(formData: FormData) {
+export async function toggleContainerItemActiveAction(formData: FormData) {
   const session = await requireAdmin();
   const id = String(formData.get("id"));
   const active = formData.get("active") === "true";
 
-  const res = await prisma.container.updateMany({
+  const res = await prisma.containerItem.updateMany({
     where: { id, tenantId: session.user.tenantId },
     data: { active: !active },
   });
@@ -142,8 +139,8 @@ export async function toggleContainerActiveAction(formData: FormData) {
   await audit({
     userId: session.user.id,
     actorEmail: session.user.email,
-    action: active ? "container.deactivate" : "container.activate",
-    entity: "Container",
+    action: active ? "container.item.deactivate" : "container.item.activate",
+    entity: "ContainerItem",
     entityId: id,
   });
 
@@ -220,8 +217,19 @@ export async function addMovementAction(formData: FormData) {
   });
   if (!item) return { error: "Item no encontrado" };
 
-  if (type === "OUT" && amount > item.currentWeight) {
-    return { error: "No hay suficiente stock" };
+  if (type === "OUT") {
+    // El stock que un OUT manual puede descontar es el libre: el peso actual
+    // menos lo ya comprometido en reservas de retiros. Descontar contra
+    // currentWeight a secas permitiría dejar el item por debajo de lo
+    // reservado y, al consumir esas reservas, currentWeight quedaría negativo.
+    const reserved = await prisma.reservation.aggregate({
+      where: { tenantId, containerItemId },
+      _sum: { amount: true },
+    });
+    const free = item.currentWeight - (reserved._sum.amount ?? 0);
+    if (amount > free + 1e-6) {
+      return { error: `No hay suficiente stock libre. Disponible: ${free} g.` };
+    }
   }
 
   const newWeight =

@@ -1,9 +1,9 @@
 "use client";
 
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BadgeCount } from "@/components/badge-count";
+import { BadgeCount } from "@/components/ui/badge-count";
 
 export type MobileMenuLink = { href: string; label: string; badge?: number };
 

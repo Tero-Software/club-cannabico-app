@@ -240,7 +240,6 @@ model Container {
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   number    Int
   notes     String?
-  active    Boolean         @default(false)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   items     ContainerItem[]
@@ -260,6 +259,7 @@ model ContainerItem {
   plantNumber   String?
   initialWeight Float
   currentWeight Float
+  active        Boolean    @default(false)
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
   movements     Movement[]

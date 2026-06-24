@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/db";

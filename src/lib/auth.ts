@@ -1,4 +1,4 @@
-import NextAuth, { CredentialsSignin } from "next-auth";
+import NextAuth, { CredentialsSignin, type Session } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
@@ -16,7 +16,6 @@ import { verifyTotp } from "@/lib/totp";
 import { audit } from "@/lib/audit";
 import { headers } from "next/headers";
 import { TENANT_HEADER } from "@/lib/tenant";
-import type { Role } from "@/generated/prisma/enums";
 
 class AuthError extends CredentialsSignin {
   constructor(code: string) {
@@ -29,23 +28,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   callbacks: {
     ...authConfig.callbacks,
-    session: async ({ session, token }) => {
-      // Run the base callback first
-      if (token && session.user) {
-        session.user.id = (token as { id: string }).id;
-        session.user.role = (token as { role: Role }).role;
-        session.user.mustChangePassword =
-          (token as { mustChangePassword?: boolean }).mustChangePassword ?? false;
-        session.user.totpEnabled =
-          (token as { totpEnabled?: boolean }).totpEnabled ?? false;
-        session.user.expiresAt =
-          (token as { expiresAt?: string | null }).expiresAt ?? null;
-        session.user.tenantId =
-          (token as { tenantId?: string }).tenantId ?? "";
-        session.user.tenantSlug =
-          (token as { tenantSlug?: string }).tenantSlug ?? "";
-
-        // Fetch fresh permissions from DB so changes apply without re-login
+    session: async (params) => {
+      // Mapea token → session con el callback base (única fuente de verdad).
+      const session = authConfig.callbacks!.session!(params) as Session;
+      // Sobre eso, refresca permisos desde la DB para que los cambios apliquen
+      // sin necesidad de re-loguear.
+      if (params.token && session.user?.id) {
         const fresh = await prisma.user.findUnique({
           where: { id: session.user.id },
           select: { permissions: true },

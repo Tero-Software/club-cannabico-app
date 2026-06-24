@@ -1,6 +1,6 @@
 "use client";
 
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import {
   createSocioAction,
@@ -8,8 +8,8 @@ import {
   type CreateSocioState,
   type CreateVisitorInviteState,
 } from "./actions";
-import { BadgeCount } from "@/components/badge-count";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { BadgeCount } from "@/components/ui/badge-count";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export function NuevoSocioHeader({
   title,

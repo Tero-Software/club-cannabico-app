@@ -5,7 +5,7 @@ import {
   crearRetiroAdminAction,
   type CrearRetiroAdminState,
 } from "./actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 type Socio = { id: string; name: string; email: string };
 type Strain = { id: string; name: string };

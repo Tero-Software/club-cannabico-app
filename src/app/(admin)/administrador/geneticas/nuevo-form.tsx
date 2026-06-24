@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import type { GeneticaFormState } from "./actions";
 import { PhotosEditor } from "./photos-editor";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 type Action = (prev: GeneticaFormState, fd: FormData) => Promise<GeneticaFormState>;
 

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { promoverASocioAction } from "./actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export function PromoteForm({
   socios,

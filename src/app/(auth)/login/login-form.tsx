@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { loginAction, type FormState } from "../actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export function LoginForm() {
   const [state, action, pending] = useActionState<FormState, FormData>(

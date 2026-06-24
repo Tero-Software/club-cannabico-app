@@ -1,7 +1,7 @@
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { Logo } from "@/components/logo";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { Logo } from "@/components/ui/logo";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { getCurrentTenant } from "@/lib/tenant";
 
 export default async function PublicLayout({

@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { createContainerAction } from "./actions";
 import type { Strain } from "./containers-list";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 type DraftItem = {
   strainId: string;

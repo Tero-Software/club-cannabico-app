@@ -1,31 +1,66 @@
 @import "tailwindcss";
 
+/* Design tokens calcados del sistema real de Linear (valores exactos extraídos
+   de su CSS de producción; ver .claude/linear-tokens-raw.css). Se conservan los
+   nombres propios del proyecto para no romper el código existente, mapeados a
+   los valores de Linear. El acento sigue siendo el verde institucional, no el
+   indigo de Linear. */
 :root {
-  --background: #0b0c0b;
-  --foreground: #e8e8e4;
-  --primary: #4a7a52;
-  --primary-hover: #5a8d63;
+  /* Los 4 niveles de superficie reales de Linear (--color-bg-level-0..3).
+     El canvas es lo más oscuro; la elevación se expresa con color más claro,
+     no con sombra ("luminance stacking"). Cada componente de superficie
+     declara su nivel: canvas=0, panel=1, surface=2, raised=3. */
+  --level-0: #08090a;
+  --level-1: #0f1011;
+  --level-2: #141516;
+  --level-3: #191a1b;
+
+  /* Alias semánticos del proyecto sobre los niveles (compatibilidad). */
+  --background: var(--level-0);
+  --surface-1: var(--level-1);
+  --surface-2: var(--level-2);
+  --surface-3: var(--level-3);
+  --card: var(--level-3);
+  --muted: var(--level-2);
+
+  /* Texto: 4 niveles (fg-primary..quaternary de Linear). */
+  --foreground: #f7f8f8;
+  --fg-secondary: #d0d6e0;
+  --fg-tertiary: #8a8f98;
+  --fg-quaternary: #62666d;
+  --muted-foreground: #8a8f98;
+
+  /* Bordes: 3 niveles (border-primary..tertiary de Linear). */
+  --border: #23252a;
+  --border-subtle: #23252a;
+  --border-strong: #34343a;
+  --border-tertiary: #3e3e44;
+
+  /* Acento institucional del club: verde. */
+  --accent: #4a7a52;
+  --accent-hover: #5a8d63;
+  --brand: #4a7a52;
+  --primary: var(--accent);
+  --primary-hover: var(--accent-hover);
+  /* Accents institucionales del club (rasta): se mantienen para el logo. */
   --accent-red: #a64545;
   --accent-yellow: #c8a860;
+  --accent-green: #4a7a52;
   --accent-blue: #6b8a99;
-  --muted: #141514;
-  --muted-foreground: #a8a8a3;
-  --border: #232423;
-  --card: #111211;
   --destructive: #a64545;
   --warning: #c8a860;
   --success: #4a7a52;
-  /* Escala de elevación tipo Linear: del canvas a lo elevado, rango estrecho.
-     Las superficies suben en luminosidad de a poco; el borde y la sombra dan
-     la profundidad, no el relleno. */
-  --surface-1: #0e0f0e;
-  --surface-2: #141514;
-  --surface-3: #1a1b1a;
-  --border-subtle: #1b1c1b;
-  --border-strong: #2e302e;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 12px 40px -8px rgba(0, 0, 0, 0.6);
+
+  /* Sombras de Linear. En dark son casi nulas: la elevación es color, no sombra. */
+  --shadow-sm: 0px 1px 1px 0px #00000017;
+  --shadow-md: 0px 3px 12px #00000017;
+  --shadow-lg: 0px 7px 24px #0000000f;
+
+  /* Radios (escala de Linear). */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
   /* Glow del acento para heros/realces. Difuso, racionado. */
   --glow-primary: radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--primary) 22%, transparent) 0%, transparent 70%);
   /* Placeholders pastel para covers de blog (derivados de los accents institucionales) */
@@ -36,31 +71,52 @@
 }
 
 html[data-theme="light"] {
-  --background: #fafaf7;
-  --foreground: #1a1a18;
-  --primary: #3d6844;
-  --primary-hover: #4a7a52;
+  /* Análogo del dark con la escala light de Linear (bg-level-0..3): el canvas es
+     lo más claro y cada nivel baja hacia el gris. */
+  --level-0: #ffffff;
+  --level-1: #f8f8f8;
+  --level-2: #f4f4f4;
+  --level-3: #f0f0f0;
+
+  --background: var(--level-0);
+  --surface-1: var(--level-1);
+  --surface-2: var(--level-2);
+  --surface-3: var(--level-3);
+  --card: var(--level-3);
+  --muted: #f4f4f5;
+
+  --foreground: #282a2f;
+  --fg-secondary: #3c4149;
+  --fg-tertiary: #6f6e77;
+  --fg-quaternary: #86848d;
+  --muted-foreground: #6f6e77;
+
+  --border: #e9e8ea;
+  --border-subtle: #e9e8ea;
+  --border-strong: #e4e2e4;
+  --border-tertiary: #dcdbdd;
+
+  --accent: #3d6844;
+  --accent-hover: #4a7a52;
+  --brand: #3d6844;
+  --primary: var(--accent);
+  --primary-hover: var(--accent-hover);
   --accent-red: #9a3e3e;
   --accent-yellow: #a88640;
+  --accent-green: #3d6844;
   --accent-blue: #567585;
-  --muted: #efede8;
-  --muted-foreground: #5a5a55;
-  --border: #d8d6d0;
-  --card: #ffffff;
   --destructive: #9a3e3e;
   --warning: #a88640;
   --success: #3d6844;
+
+  /* Sombras de Linear (light): sutiles pero presentes. */
+  --shadow-sm: 0px 1px 1px 0px #00000017;
+  --shadow-md: 0px 3px 12px #00000017;
+  --shadow-lg: 0px 7px 24px #0000000f;
+
   --blog-cover-1: #e8d5d0;
   --blog-cover-2: #ede4d0;
   --blog-cover-3: #d5e3d8;
-  --surface-1: #ffffff;
-  --surface-2: #f4f2ed;
-  --surface-3: #ebe8e1;
-  --border-subtle: #e4e2dc;
-  --border-strong: #cbc8c0;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 16px -4px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 12px 40px -8px rgba(0, 0, 0, 0.14);
   --glow-primary: radial-gradient(60% 60% at 50% 0%, color-mix(in oklab, var(--primary) 14%, transparent) 0%, transparent 70%);
   color-scheme: light;
 }
@@ -70,12 +126,29 @@ html[data-theme="light"] {
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-brand: var(--brand);
+  --color-level-0: var(--level-0);
+  --color-level-1: var(--level-1);
+  --color-level-2: var(--level-2);
+  --color-level-3: var(--level-3);
   --color-accent-red: var(--accent-red);
   --color-accent-yellow: var(--accent-yellow);
+  --color-accent-green: var(--accent-green);
   --color-accent-blue: var(--accent-blue);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-fg-secondary: var(--fg-secondary);
+  --color-fg-tertiary: var(--fg-tertiary);
+  --color-fg-quaternary: var(--fg-quaternary);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-border-tertiary: var(--border-tertiary);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-card: var(--card);
   --color-destructive: var(--destructive);
   --color-warning: var(--warning);
@@ -122,31 +195,23 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Features y tracking de cuerpo de Linear: alternativas estilísticas de Inter
+     + tracking levemente negativo en texto regular. */
+  font-feature-settings: "cv01", "ss03";
+  letter-spacing: -0.011em;
   overflow-x: clip;
 }
 
-.top-loader {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 3px;
-  z-index: 9999;
-  pointer-events: none;
-  background: linear-gradient(
-    90deg,
-    var(--primary) 0%,
-    var(--primary-hover) 50%,
-    var(--primary) 100%
-  );
-  box-shadow: 0 0 8px color-mix(in oklab, var(--primary) 60%, transparent);
-  width: 0;
-  opacity: 0;
-  transition: opacity 180ms ease;
-}
-.top-loader.is-visible {
-  opacity: 1;
-}
+/* Pesos de Linear: medium 510, semibold 590, bold 680. Mapeo de las clases de
+   peso de Tailwind a los pesos reales del sistema, para el look "preciso". */
+.font-medium { font-weight: 510; }
+.font-semibold { font-weight: 590; }
+.font-bold { font-weight: 680; }
+
+/* Títulos: tracking negativo proporcional al tamaño (escala title-* de Linear). */
+h1, h2, h3 { letter-spacing: -0.022em; }
+h4, h5, h6 { letter-spacing: -0.012em; }
 
 /* Buttons */
 .btn {
@@ -155,9 +220,9 @@ body {
   justify-content: center;
   gap: 0.5rem;
   padding: 0.625rem 1.25rem;
-  border-radius: 0.5rem;
-  font-weight: 500;
-  font-size: 0.95rem;
+  border-radius: var(--radius-md);
+  font-weight: 510;
+  font-size: 0.9375rem;
   transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
   cursor: pointer;
   border: 1px solid transparent;
@@ -213,11 +278,11 @@ body {
   --input-trailing: 0.875rem;
   width: 100%;
   padding: 0.625rem 0.875rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border);
-  background: var(--background);
+  background: var(--surface-1);
   color: var(--foreground);
-  font-size: 0.95rem;
+  font-size: 0.9375rem;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input:focus {
@@ -275,15 +340,17 @@ input[type="datetime-local"].input {
 .label {
   display: block;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 510;
   color: var(--foreground);
   margin-bottom: 0.375rem;
 }
 
+/* La card sube un escalón sobre el panel de contenido (--surface-2):
+   en el modelo Linear lo elevado es más claro, no más oscuro. */
 .card {
-  background: var(--card);
+  background: var(--surface-3);
   border: 1px solid var(--border-subtle);
-  border-radius: 0.75rem;
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
 }
@@ -317,7 +384,7 @@ input[type="datetime-local"].input {
     from 90deg,
     var(--accent-red) 0deg 120deg,
     var(--accent-yellow) 120deg 240deg,
-    var(--primary) 240deg 360deg
+    var(--accent-green) 240deg 360deg
   );
   box-shadow: inset 0 0 0 2px #000;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
@@ -331,28 +398,9 @@ input[type="datetime-local"].input {
   display: none;
 }
 
-/* Top loader rasta: fondo fijo al viewport, clip-path revela el avance.
-   Cada pixel mantiene su color durante toda la animación. */
-#nprogress-rasta {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1.5px;
-  z-index: 1600;
-  pointer-events: none;
-  background: linear-gradient(
-    to right,
-    var(--accent-red) 0%,
-    var(--accent-red) 28%,
-    var(--accent-yellow) 38%,
-    var(--accent-yellow) 62%,
-    var(--primary) 72%,
-    var(--primary) 100%
-  );
-  clip-path: inset(0 calc((1 - var(--rasta-progress, 0)) * 100%) 0 0);
-  transition:
-    clip-path 0.25s ease,
-    opacity 0.2s ease;
-  box-shadow: 0 0 3px rgba(200, 168, 96, 0.3);
+/* Barra de carga (bprogress): fina y con el acento. Un solo lugar de control. */
+:root {
+  --bprogress-height: 1px;
+  --bprogress-color: var(--accent);
 }
+

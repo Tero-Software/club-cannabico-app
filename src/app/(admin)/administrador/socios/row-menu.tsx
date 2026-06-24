@@ -1,9 +1,9 @@
 "use client";
 
-import { Link } from "@/components/progress/link";
+import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toggleSocioActivoAction } from "./actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 export function SocioRowMenu({
   id,

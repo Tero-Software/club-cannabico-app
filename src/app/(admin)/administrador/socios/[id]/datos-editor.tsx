@@ -5,7 +5,7 @@ import {
   editSocioAction,
   type EditSocioState,
 } from "../actions";
-import { SavingSpinner } from "@/components/saving-spinner";
+import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 type Socio = {
   id: string;
