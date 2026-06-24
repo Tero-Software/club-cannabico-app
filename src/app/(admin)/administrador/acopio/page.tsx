@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
@@ -70,11 +69,15 @@ export default async function ContainersPage() {
   }
   const totalConsumed = totalInitial - totalCurrent;
   const consumedPct = totalInitial > 0 ? (totalConsumed / totalInitial) * 100 : 0;
-  const totalItems = containers.reduce((s, c) => s + c.items.length, 0);
-  const activeCount = containers.reduce(
-    (s, c) => s + c.items.filter((i) => i.active).length,
-    0,
-  );
+  // Genéticas distintas disponibles (por strainId): las que tienen al menos un
+  // item activo. Una genética repartida en varios contenedores cuenta una vez.
+  const strainsActivas = new Set<string>();
+  for (const c of containers) {
+    for (const item of c.items) {
+      if (item.strainId && item.active) strainsActivas.add(item.strainId);
+    }
+  }
+  const activeCount = strainsActivas.size;
 
   return (
     <div className="space-y-8">
@@ -84,13 +87,13 @@ export default async function ContainersPage() {
         stats={
           <>
             <div className="card p-0 overflow-hidden">
-              <StatRow label="Genéticas activas" value={`${activeCount} / ${totalItems}`} />
+              <StatRow label="Genéticas disponibles" value={`${activeCount}`} />
               <StatRow label="Stock total" value={formatGramos(totalCurrent)} />
             </div>
             <div className="card p-0 overflow-hidden">
               <StatRow label="Cosecha actual" value={formatGramos(totalInitial)} />
               <StatRow
-                label="Consumido"
+                label="Retirado"
                 value={`${formatGramos(totalConsumed)} (${consumedPct.toFixed(1)}%)`}
               />
             </div>

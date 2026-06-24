@@ -28,15 +28,9 @@ export function Logo({
         priority
       />
       {!hideText && (
-        <span className="flex flex-col leading-tight">
-          <span className="font-medium tracking-[0.2em] text-sm text-[var(--foreground)]">
-            {appName.toUpperCase()}
-          </span>
-          {showUruguay && (
-            <span className="text-[0.6rem] text-[var(--muted-foreground)] tracking-[0.3em]">
-              URUGUAY
-            </span>
-          )}
+        <span className="font-medium tracking-[0.2em] text-sm text-[var(--foreground)]">
+          {appName.toUpperCase()}
+          {showUruguay && " URUGUAY"}
         </span>
       )}
       <span className="sr-only">{appName}</span>

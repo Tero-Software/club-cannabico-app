@@ -48,7 +48,7 @@ export async function confirmTotpEnrollment(
     where: { id: session.user.id },
   });
   if (!user?.totpSecret)
-    return { error: "Generá primero un secreto de enrolamiento." };
+    return { error: "Generá primero el código de configuración." };
 
   if (!verifyTotp(user.totpSecret, code))
     return { error: "Código inválido. Volvé a intentar." };

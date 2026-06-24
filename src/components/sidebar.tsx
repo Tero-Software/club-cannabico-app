@@ -9,6 +9,15 @@ export type SidebarItem = {
   label: string;
   icon?: React.ReactNode;
   badge?: number;
+  /** Gravedad de la notificación → color del badge. Por defecto verde. */
+  badgeColor?: "ok" | "warning" | "danger";
+  alert?: boolean;
+};
+
+const BADGE_BG: Record<NonNullable<SidebarItem["badgeColor"]>, string> = {
+  ok: "var(--primary)",
+  warning: "var(--warning)",
+  danger: "var(--destructive)",
 };
 
 export type SidebarSection = {
@@ -200,8 +209,17 @@ function SidebarLink({ item, active }: { item: SidebarItem; active: boolean }) {
       )}
       <span className="truncate flex-1">{item.label}</span>
       {item.badge ? (
-        <span className="ml-auto inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-[0.65rem] font-semibold bg-[var(--primary)] text-white">
+        <span
+          className={`ml-auto inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-[0.65rem] font-semibold ${
+            item.badgeColor === "warning" ? "text-black" : "text-white"
+          }`}
+          style={{ background: BADGE_BG[item.badgeColor ?? "ok"] }}
+        >
           {item.badge}
+        </span>
+      ) : item.alert ? (
+        <span className="ml-auto inline-flex items-center justify-center min-w-[1.125rem] h-[1.125rem] px-1 rounded-full text-xs font-bold leading-none bg-[var(--destructive)] text-white">
+          !
         </span>
       ) : null}
     </Link>

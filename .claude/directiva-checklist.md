@@ -84,6 +84,20 @@ Campos nuevos en `Tenant` que los documentos necesitan como variables. Hoy NO ex
 - [ ] **C2.** Badge en el sidebar de Directiva (patrón `BadgeCount` / dot-pulse existente).
 - [ ] **C3.** (Opcional) Aviso por mail al admin vía Resend, reusando `lib/resend.ts`.
 
+## Bloque D — Inicio "Actividades próximas" (recuadros dinámicos)
+
+El home del admin (`(admin)/administrador/page.tsx`, título "Actividades próximas") deja de
+ser fijo: muestra un recuadro por cada actividad/tarea pendiente del club, no solo retiros.
+
+- [ ] **D1.** Modelo de "actividad próxima": fuente derivada (retiros de hoy/pendientes,
+      acta a emitir, control sanitario, cosecha programada, AGO a convocar…). Cada módulo
+      aporta sus ítems; nada cableado. Reusar la lógica de C1 para las de directiva.
+- [ ] **D2.** Render: una card/`<section>` por tipo de actividad, condicional a que haya
+      algo que mostrar y al permiso del módulo. Mismo formato de filas que la card de Retiros.
+      Si no hay actividades de un tipo, su card no aparece.
+- [ ] **D3.** Orden/priorización de las cards (por urgencia/fecha). Definir cuando existan
+      las fuentes (depende de A/B/C y de acopio/sanitaria).
+
 ---
 
 ## Orden propuesto

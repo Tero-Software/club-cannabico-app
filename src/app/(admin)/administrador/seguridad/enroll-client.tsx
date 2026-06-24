@@ -48,7 +48,7 @@ export function TotpEnrollClient({
           className="btn btn-primary inline-flex items-center justify-center gap-2"
         >
           {starting && <SavingSpinner />}
-          Iniciar enrolamiento
+          Configurar autenticador
         </button>
       </form>
     );

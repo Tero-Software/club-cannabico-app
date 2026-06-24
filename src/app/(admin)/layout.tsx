@@ -71,14 +71,57 @@ export default async function AdminLayout({
       ]),
     },
     {
-      title: "Ajustes",
+      title: "Directiva",
       items: visible([
         {
-          href: "/administrador/estadisticas",
-          label: "Estadísticas",
-          icon: <EstadisticasIcon />,
-          show: can(session, "estadisticas:view"),
+          href: "/administrador/directiva/actas",
+          label: "Actas",
+          icon: <DirectivaIcon />,
+          badge: 1,
+          show: true,
         },
+        {
+          href: "/administrador/directiva/finanzas",
+          label: "Finanzas",
+          icon: <FinanzasIcon />,
+          show: true,
+        },
+        {
+          href: "/administrador/directiva/memorias",
+          label: "Memorias",
+          icon: <MemoriasIcon />,
+          show: true,
+        },
+      ]),
+    },
+    {
+      title: "Operativa",
+      items: visible([
+        {
+          href: "/administrador/operativa/trazabilidad",
+          label: "Trazabilidad",
+          icon: <TrazabilidadIcon />,
+          badge: 2,
+          badgeColor: "warning",
+          show: true,
+        },
+        {
+          href: "/administrador/operativa/sanitaria",
+          label: "Sanitaria",
+          icon: <SanitariaIcon />,
+          show: true,
+        },
+        {
+          href: "/administrador/operativa/cosechas",
+          label: "Cosechas",
+          icon: <CosechasIcon />,
+          show: true,
+        },
+      ]),
+    },
+    {
+      title: "Ajustes",
+      items: visible([
         {
           href: "/administrador/administradores",
           label: "Administradores",
@@ -102,7 +145,7 @@ export default async function AdminLayout({
   ];
 
   const brand = (
-    <div className="flex items-center gap-2 min-w-0">
+    <div className="flex items-center gap-2 min-w-0 w-full">
       <Link
         href="/administrador"
         className="flex items-center gap-2 min-w-0 rounded-md transition-transform active:scale-[0.97]"
@@ -119,7 +162,11 @@ export default async function AdminLayout({
           {username}
         </span>
       </Link>
-      {isOwner && <CrownIcon />}
+      {isOwner && (
+        <span className="ml-auto shrink-0">
+          <CrownIcon />
+        </span>
+      )}
     </div>
   );
 
@@ -145,11 +192,12 @@ export default async function AdminLayout({
   );
 
   return (
-    <div className="min-h-screen bg-[var(--background)] flex flex-col lg:flex-row">
+    <div className="app-shell min-h-screen lg:h-screen lg:overflow-hidden bg-[var(--background)] flex flex-col lg:flex-row">
       <Sidebar brand={brand} sections={sections} footer={footer} />
       {/* Panel de contenido flotante: superficie más clara que el canvas,
-          redondeada, separada del borde por un gutter (modelo Linear). */}
-      <main className="flex-1 min-w-0 lg:my-2 lg:mr-2 bg-[var(--surface-2)] lg:rounded-xl lg:border lg:border-[var(--border-subtle)] overflow-hidden">
+          redondeada, separada del borde por un gutter (modelo Linear).
+          En desktop el shell queda fijo al viewport y el scroll vive acá. */}
+      <main className="flex-1 min-w-0 lg:my-2 lg:mr-1 bg-[var(--surface-2)] lg:rounded-xl lg:border lg:border-[var(--border-subtle)] overflow-hidden lg:overflow-y-auto">
         <div className="px-4 sm:px-6 lg:px-10 py-8">{children}</div>
       </main>
     </div>
@@ -216,13 +264,63 @@ function SociosIcon() {
   );
 }
 
-function EstadisticasIcon() {
+
+function DirectivaIcon() {
   return (
     <svg {...iconProps}>
-      <line x1="4" y1="20" x2="4" y2="10" />
-      <line x1="10" y1="20" x2="10" y2="4" />
-      <line x1="16" y1="20" x2="16" y2="14" />
-      <line x1="3" y1="20" x2="21" y2="20" />
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="8" y1="13" x2="16" y2="13" />
+      <line x1="8" y1="17" x2="16" y2="17" />
+      <line x1="8" y1="9" x2="10" y2="9" />
+    </svg>
+  );
+}
+
+function FinanzasIcon() {
+  return (
+    <svg {...iconProps}>
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  );
+}
+
+function MemoriasIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  );
+}
+
+function TrazabilidadIcon() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="5" cy="6" r="2" />
+      <circle cx="12" cy="18" r="2" />
+      <circle cx="19" cy="6" r="2" />
+      <path d="M5 8v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8" />
+      <line x1="12" y1="13" x2="12" y2="16" />
+    </svg>
+  );
+}
+
+function SanitariaIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M11 2a2 2 0 0 0-2 2v5H4a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h5v5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-5h5a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2h-5V4a2 2 0 0 0-2-2z" />
+    </svg>
+  );
+}
+
+function CosechasIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M12 22v-8" />
+      <path d="M12 14c-3 0-6-2-6-6 3 0 6 2 6 6z" />
+      <path d="M12 11c0-3 2-6 6-6 0 3-2 6-6 6z" />
     </svg>
   );
 }

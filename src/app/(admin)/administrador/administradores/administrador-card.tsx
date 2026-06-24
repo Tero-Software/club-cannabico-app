@@ -85,22 +85,15 @@ export function AdminCard({
     <div className="card">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-3">
         <div>
-          <div className="font-medium flex items-center gap-2 flex-wrap">
-            <span>{name}</span>
-            {isOwner && (
-              <span className="text-[10px] uppercase tracking-wider bg-[var(--accent-yellow)] text-black px-1.5 py-0.5 rounded font-semibold">
-                owner
-              </span>
-            )}
-            {esTuyo && (
-              <span className="text-xs text-[var(--muted-foreground)]">
-                (vos)
-              </span>
-            )}
-          </div>
+          <div className="font-medium">{name}</div>
           <div className="text-sm text-[var(--muted-foreground)]">{email}</div>
         </div>
         <div className="flex items-center gap-3">
+          {isOwner && (
+            <span className="text-[10px] uppercase tracking-wider bg-[var(--accent-yellow)] text-black px-1.5 py-0.5 rounded font-semibold">
+              owner
+            </span>
+          )}
           {canGrantOwner && (
             <button
               type="button"
@@ -125,7 +118,8 @@ export function AdminCard({
           )}
         </div>
       </div>
-      <div className="grid sm:grid-cols-2 gap-2 mb-3">
+      <div className="border-t border-[var(--border-subtle)] -mx-6" />
+      <div className={`grid sm:grid-cols-2 gap-2 pt-5 ${!esTuyo && !locked ? "pb-5" : ""}`}>
         {visiblePermissions.map((p) => (
           <label key={p} className="flex items-center gap-2 text-sm">
             <input
@@ -155,11 +149,6 @@ export function AdminCard({
             Guardar permisos
           </button>
         </div>
-      )}
-      {esTuyo && (
-        <p className="text-xs text-[var(--muted-foreground)]">
-          No podés editar tus propios permisos.
-        </p>
       )}
       {locked && (
         <p className="text-xs text-[var(--muted-foreground)]">

@@ -8,12 +8,11 @@ import { SociosTable } from "./socios-table";
 
 export const metadata = { title: "Socios (administrador)" };
 
-type SortKey = "ultimo" | "historico" | "login";
+type SortKey = "ultimo" | "login";
 
 const SORTS: { label: string; value: SortKey }[] = [
   { label: "Último retiro", value: "ultimo" },
   { label: "Último login", value: "login" },
-  { label: "Mejor histórico", value: "historico" },
 ];
 
 export default async function AdminSociosPage({
@@ -61,7 +60,6 @@ export default async function AdminSociosPage({
 
   enriched.sort((a, b) => {
     if (a.active !== b.active) return a.active ? -1 : 1;
-    if (sort === "historico") return b._count.withdrawals - a._count.withdrawals;
     if (sort === "login") {
       const al = a.lastLoginAt?.getTime() ?? 0;
       const bl = b.lastLoginAt?.getTime() ?? 0;

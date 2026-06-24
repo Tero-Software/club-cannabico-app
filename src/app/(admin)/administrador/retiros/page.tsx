@@ -86,7 +86,6 @@ export default async function AdminRetirosPage({
     <div>
       <NuevoRetiroHeader
         title="Retiros"
-        subtitle="Aprobá, rechazá o marcá como completados los retiros agendados."
         socios={socios}
         strains={strains}
         horarios={config.horarios}

@@ -165,8 +165,47 @@ html[data-theme="light"] {
 }
 
 html {
-  overflow-y: scroll;
+  overflow-y: auto;
   scrollbar-gutter: stable;
+}
+/* En el shell (admin/dashboard) la ventana no scrollea: el scroll vive en el
+   panel de contenido. Sin gutter reservado para no dejar una franja muerta. */
+@media (min-width: 1024px) {
+  html:has(.app-shell) {
+    overflow: hidden;
+    scrollbar-gutter: auto;
+  }
+}
+
+/* Scrollbars finos y oscuros, integrados al tema (no los nativos claros).
+   Firefox. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+/* Webkit (Chrome/Safari/Edge). */
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+  /* Aleja el thumb de los extremos del riel. */
+  margin: 10px 0;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+  /* Borde transparente más grueso = thumb visualmente más fino. */
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--border-tertiary);
+  background-clip: padding-box;
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* Container único: padding lateral congelado al primer render.

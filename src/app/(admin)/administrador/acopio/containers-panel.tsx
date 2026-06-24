@@ -19,19 +19,14 @@ export function ContainersPanel({
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <h1 className="text-3xl font-bold">Acopio</h1>
-          <Link
-            href="/administrador/geneticas"
-            className="btn btn-secondary text-sm"
-          >
-            Editar genéticas
-          </Link>
-        </div>
-        <p className="text-[var(--muted-foreground)]">
-          Inventario de la cosecha — contenedores y existencias.
-        </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h1 className="text-3xl font-bold">Acopio</h1>
+        <Link
+          href="/administrador/geneticas"
+          className="btn btn-secondary text-sm"
+        >
+          Editar genéticas
+        </Link>
       </div>
 
       {stats && (

@@ -15,68 +15,45 @@ export default async function AdminHome() {
 
   const tenantId = session!.user.tenantId;
   const puedeVerRetiros = can(session, "retiros:manage");
-  const puedeVerGeneticas = can(session, "geneticas:manage");
-  const puedeVerContainers = can(session, "containers:manage");
 
-  const [retirosHoy, retirosPendientes, geneticasActivas, stockAgg] =
-    await Promise.all([
-      puedeVerRetiros
-        ? prisma.withdrawal.findMany({
-            where: {
-              tenantId,
-              date: { gte: today, lt: tomorrow },
-              status: { in: ["PENDING", "APPROVED"] },
-            },
-            include: {
-              items: { include: { strain: true } },
-              user: { select: { name: true } },
-            },
-            orderBy: { date: "asc" },
-          })
-        : Promise.resolve([] as never[]),
-      puedeVerRetiros
-        ? prisma.withdrawal.findMany({
-            where: {
-              tenantId,
-              date: { gte: tomorrow },
-              status: { in: ["PENDING", "APPROVED"] },
-            },
-            include: {
-              items: { include: { strain: true } },
-              user: { select: { name: true } },
-            },
-            orderBy: { date: "asc" },
-            take: 12,
-          })
-        : Promise.resolve([] as never[]),
-      puedeVerGeneticas
-        ? prisma.containerItem
-            .findMany({
-              where: { tenantId, currentWeight: { gt: 0 } },
-              select: { strainId: true },
-              distinct: ["strainId"],
-            })
-            .then((rows) => rows.length)
-        : Promise.resolve(0),
-      puedeVerContainers
-        ? prisma.containerItem.aggregate({
-            where: { tenantId },
-            _sum: { currentWeight: true },
-          })
-        : Promise.resolve({ _sum: { currentWeight: null } }),
-    ]);
+  const [retirosHoy, retirosPendientes] = await Promise.all([
+    puedeVerRetiros
+      ? prisma.withdrawal.findMany({
+          where: {
+            tenantId,
+            date: { gte: today, lt: tomorrow },
+            status: { in: ["PENDING", "APPROVED"] },
+          },
+          include: {
+            items: { include: { strain: true } },
+            user: { select: { name: true } },
+          },
+          orderBy: { date: "asc" },
+        })
+      : Promise.resolve([] as never[]),
+    puedeVerRetiros
+      ? prisma.withdrawal.findMany({
+          where: {
+            tenantId,
+            date: { gte: tomorrow },
+            status: { in: ["PENDING", "APPROVED"] },
+          },
+          include: {
+            items: { include: { strain: true } },
+            user: { select: { name: true } },
+          },
+          orderBy: { date: "asc" },
+          take: 12,
+        })
+      : Promise.resolve([] as never[]),
+  ]);
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-1">Panel de administración</h1>
-        <p className="text-[var(--muted-foreground)]">
-          Resumen general del club.
-        </p>
-      </div>
+      <h1 className="text-3xl font-bold">Actividades próximas</h1>
 
       {puedeVerRetiros && (
-        <section className="lg:w-1/2">
+        <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">Retiros</h2>
             <Link
@@ -104,27 +81,73 @@ export default async function AdminHome() {
         </section>
       )}
 
-      {(puedeVerGeneticas || puedeVerContainers) && (
-        <section className="lg:w-1/2">
-          <h2 className="text-xl font-semibold mb-3">Genéticas y stock</h2>
-          <div className="card p-0 overflow-hidden">
-            {puedeVerGeneticas && (
-              <DataRow
-                label="Genéticas en stock"
-                value={geneticasActivas.toString()}
-                href="/administrador/geneticas"
-              />
-            )}
-            {puedeVerContainers && (
-              <DataRow
-                label="Stock total"
-                value={formatGramos(stockAgg._sum.currentWeight ?? 0)}
-                href="/administrador/acopio"
-              />
-            )}
-          </div>
-        </section>
-      )}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-semibold">Actas</h2>
+          <Link
+            href="/administrador/directiva/actas"
+            className="text-sm text-[var(--primary)]"
+          >
+            Ver todas →
+          </Link>
+        </div>
+        <div className="card p-0 overflow-hidden">
+          <AvisoRow
+            color="ok"
+            titulo="Asamblea de directiva mensual"
+            detalle="Pendiente de acta. Vence en 4 días."
+          />
+        </div>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-semibold">Trazabilidad</h2>
+          <Link
+            href="/administrador/operativa/trazabilidad"
+            className="text-sm text-[var(--primary)]"
+          >
+            Ver detalle →
+          </Link>
+        </div>
+        <div className="card p-0 overflow-hidden">
+          <AvisoRow
+            color="warning"
+            titulo="2 entradas necesitan atención"
+            detalle="Registrá el seguimiento de las plantas para mantener la cadena al día."
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function AvisoRow({
+  color,
+  titulo,
+  detalle,
+}: {
+  color: "ok" | "warning" | "danger";
+  titulo: string;
+  detalle: string;
+}) {
+  const dot =
+    color === "warning"
+      ? "var(--warning)"
+      : color === "danger"
+        ? "var(--destructive)"
+        : "var(--primary)";
+  return (
+    <div className="flex items-start gap-3 px-5 py-3">
+      <span
+        aria-hidden
+        className="mt-1.5 h-2 w-2 rounded-full shrink-0"
+        style={{ background: dot }}
+      />
+      <div className="min-w-0">
+        <div className="font-medium">{titulo}</div>
+        <div className="text-sm text-[var(--muted-foreground)]">{detalle}</div>
+      </div>
     </div>
   );
 }
@@ -164,22 +187,3 @@ function RetiroRow({
   );
 }
 
-function DataRow({
-  label,
-  value,
-  href,
-}: {
-  label: string;
-  value: string;
-  href: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[var(--border-subtle)] first-of-type:border-t-0 hover:bg-[var(--surface-2)] transition-colors"
-    >
-      <span className="text-sm text-[var(--muted-foreground)]">{label}</span>
-      <span className="text-lg font-semibold">{value}</span>
-    </Link>
-  );
-}

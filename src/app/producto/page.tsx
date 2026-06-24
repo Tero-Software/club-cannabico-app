@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { Logo } from "@/components/ui/logo";
 
 const appName = process.env.NEXT_PUBLIC_APP_NAME ?? "Club Cannábico App";
@@ -67,7 +68,7 @@ export default function ProductoLanding() {
 
       <header className="border-b border-[var(--border-subtle)] sticky top-0 z-20 backdrop-blur-xl bg-[color-mix(in_oklab,var(--background)_72%,transparent)]">
         <div className="container-page py-4 flex items-center justify-between gap-4">
-          <Logo />
+          <Logo showUruguay />
           <a
             href={whatsappUrl}
             target="_blank"
@@ -95,17 +96,28 @@ export default function ProductoLanding() {
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium leading-[1.05] tracking-[-0.02em] text-balance">
                 Una app pensada para clubes cannábicos uruguayos.
               </h1>
-              <p className="mt-6 text-lg sm:text-xl text-[var(--muted-foreground)] leading-relaxed max-w-2xl">
+              <p className="mt-6 text-sm sm:text-base text-[var(--fg-quaternary)] leading-relaxed sm:whitespace-nowrap">
                 Socios, retiros, acopio, trazabilidad y actas de directiva en un
                 solo lugar, con los controles que pide el IRCCA.
               </p>
             </div>
-
-            {/* TODO: screenshot de la app enmarcada (estilo Linear) va acá,
-                cuando el rediseño de UI esté pronto. No usar captura de la UI
-                actual: es justo lo que se va a cambiar. */}
           </div>
         </section>
+
+        {/* Screenshot del producto enmarcado como una card de la app: borde
+            sutil y esquinas redondeadas en los cuatro lados, imagen completa. */}
+        <div className="container-page relative pb-16 sm:pb-24">
+          <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] shadow-[var(--shadow-lg)] overflow-hidden">
+            <Image
+              src="/portada-hero.png"
+              alt="Vista del panel de administración de la app"
+              width={1920}
+              height={993}
+              priority
+              className="block w-full h-auto"
+            />
+          </div>
+        </div>
 
         {/* Áreas de la app, descritas por lo que hacen. */}
         <section className="border-t border-[var(--border)]">
@@ -128,15 +140,52 @@ export default function ProductoLanding() {
           </div>
         </section>
 
+        {/* Mensaje de despedida (closing CTA), técnica del cierre de Linear:
+            titular grande centrado con el glow del acento detrás y una acción. */}
+        <section className="relative overflow-hidden border-t border-[var(--border)]">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-[500px]"
+            style={{ background: "var(--glow-primary)", transform: "scaleY(-1)" }}
+          />
+          <div className="container-page relative py-24 sm:py-36 text-center">
+            <h2 className="text-3xl sm:text-5xl font-medium leading-[1.05] tracking-[-0.02em] text-balance max-w-3xl mx-auto">
+              Pensada para hoy. Lista para lo que viene.
+            </h2>
+            <p className="mt-5 text-base sm:text-lg text-[var(--muted-foreground)] max-w-xl mx-auto">
+              Sumá tu club y manejá socios, retiros y acopio con los controles
+              que pide el IRCCA.
+            </p>
+            <div className="mt-9 flex items-center justify-center gap-3 flex-wrap">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-full bg-[var(--foreground)] text-[var(--background)] text-sm font-medium px-5 py-2.5 transition-opacity hover:opacity-90 active:scale-[0.97]"
+              >
+                Inscribite
+              </a>
+              <a
+                href="/contacto"
+                className="rounded-full border border-[var(--border-strong)] text-[var(--foreground)] text-sm font-medium px-5 py-2.5 transition-colors hover:bg-[var(--surface-2)] active:scale-[0.97]"
+              >
+                Contactanos
+              </a>
+            </div>
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t border-[var(--border)] py-10 text-sm text-[var(--muted-foreground)]">
-        <div className="container-page flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <span className="font-light">
-            © {new Date().getFullYear()} {appName}. Uruguay.
-          </span>
-          <span className="font-light">
-            Desarrollado por{" "}
+      <footer className="border-t border-[var(--border)] py-10">
+        <div className="container-page flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between text-sm">
+          <nav className="flex items-center gap-6">
+            <FooterLink href="/producto">Inicio</FooterLink>
+            <FooterLink href="/marco-legal">Marco legal</FooterLink>
+            <FooterLink href="/contacto">Contacto</FooterLink>
+            <FooterLink href="/login">Ingresar</FooterLink>
+          </nav>
+          <span className="font-light text-[var(--muted-foreground)]">
+            © {new Date().getFullYear()} {appName}. Desarrollado por{" "}
             <a
               href="https://terosoftware.uy"
               target="_blank"
@@ -149,5 +198,18 @@ export default function ProductoLanding() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function FooterLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const external = href.startsWith("http");
+  return (
+    <a
+      href={href}
+      {...(external ? { target: "_blank", rel: "noreferrer" } : {})}
+      className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors font-light"
+    >
+      {children}
+    </a>
   );
 }
