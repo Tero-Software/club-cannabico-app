@@ -212,6 +212,96 @@ export async function approveWithdrawalAction(
   return { ok: true };
 }
 
+/**
+ * Edita la forma de pago de un retiro ya APPROVED (o COMPLETED): permite
+ * corregir si el socio pagó y con qué plan se cobra, y recalcula el monto
+ * congelado. Si el retiro ya está COMPLETED, ajusta también el asiento del
+ * libro de finanzas para que refleje el nuevo estado de pago.
+ */
+export async function updatePaymentAction(
+  formData: FormData,
+): Promise<Result | void> {
+  const session = await auth();
+  assertCan(session, "retiros:manage");
+  const tenantId = session.user.tenantId;
+
+  const id = String(formData.get("id") ?? "");
+  const paid = formData.get("paid") === "true";
+  const planIdInput = String(formData.get("planId") ?? "") || null;
+
+  const w = await prisma.withdrawal.findFirst({
+    where: { id, tenantId },
+    select: {
+      status: true,
+      date: true,
+      userId: true,
+      user: { select: { role: true, name: true, membershipPlanId: true } },
+      items: { select: { amount: true } },
+    },
+  });
+  if (!w) return { error: "Retiro no encontrado" };
+  if (w.user.role === "VISITANTE") {
+    return { error: "Este retiro es de demostración y no se puede modificar." };
+  }
+  if (w.status !== "APPROVED" && w.status !== "COMPLETED") {
+    return { error: "Solo se puede editar el pago de un retiro aprobado o completado." };
+  }
+
+  const planId = planIdInput ?? w.user.membershipPlanId;
+  const [plan, config] = await Promise.all([
+    resolvePlanForMember(tenantId, planId),
+    getClubConfig(tenantId),
+  ]);
+  const totalGrams = w.items.reduce((s, i) => s + i.amount, 0);
+  const charge = plan
+    ? computeWithdrawalCharge(plan, totalGrams, config.maxGramosMes)
+    : null;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.withdrawal.update({
+      where: { id },
+      data: { paid, chargedAmount: charge, appliedPlanId: plan?.id ?? null },
+    });
+
+    // Si el retiro ya estaba completado, el asiento del libro debe seguir al
+    // nuevo estado de pago: se crea/actualiza si paga y hay monto, o se quita.
+    if (w.status === "COMPLETED") {
+      if (paid && charge && charge > 0) {
+        await tx.financeEntry.upsert({
+          where: { withdrawalId: id },
+          create: {
+            tenantId,
+            date: w.date,
+            kind: "INGRESO",
+            category: "Membresía",
+            description: `Cobro de retiro — ${w.user.name}`,
+            amount: charge,
+            withdrawalId: id,
+            createdById: session.user.id,
+          },
+          update: { amount: charge },
+        });
+      } else {
+        await tx.financeEntry.deleteMany({ where: { tenantId, withdrawalId: id } });
+      }
+    }
+  });
+
+  await audit({
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "retiro.payment_edit",
+    entity: "Retiro",
+    entityId: id,
+    metadata: { socioId: w.userId, paid, planId: plan?.id ?? null, charge },
+  });
+
+  revalidatePath("/administrador");
+  revalidatePath("/administrador/retiros");
+  revalidatePath("/administrador/directiva/finanzas");
+  return { ok: true };
+}
+
 export type CrearRetiroAdminState = {
   error?: string;
   fieldErrors?: Record<string, string>;

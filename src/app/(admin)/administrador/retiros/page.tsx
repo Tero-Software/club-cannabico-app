@@ -185,7 +185,16 @@ export default async function AdminRetirosPage({
                       </>
                     )}
                     {r.status === "APPROVED" && (
-                      <EstadoButton id={r.id} status="COMPLETED" label="Marcar completado" variant="primary" />
+                      <>
+                        <EstadoButton id={r.id} status="COMPLETED" label="Marcar completado" variant="primary" />
+                        <AprobarCobro
+                          id={r.id}
+                          plans={plans}
+                          mode="editar"
+                          initialPaid={r.paid}
+                          initialPlanId={r.appliedPlanId ?? ""}
+                        />
+                      </>
                     )}
                     {(r.status === "REJECTED" || r.status === "CANCELLED") && (
                       <EstadoButton id={r.id} status="PENDING" label="Reabrir" variant="secondary" />
