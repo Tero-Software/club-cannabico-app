@@ -27,10 +27,23 @@ export async function createContainerAction(formData: FormData) {
   const number = parseInt(String(formData.get("number")), 10);
   if (isNaN(number)) return { error: "Número inválido" };
 
-  const exists = await prisma.container.findUnique({
-    where: { tenantId_number: { tenantId, number } },
+  // Si se carga dentro de una cosecha (staging), se asocia. La cosecha debe ser
+  // del club y no estar declarada todavía.
+  const harvestId = String(formData.get("harvestId") || "") || null;
+  if (harvestId) {
+    const harvest = await prisma.harvest.findFirst({
+      where: { id: harvestId, tenantId, declarada: false },
+      select: { id: true },
+    });
+    if (!harvest) return { error: "La cosecha no está disponible" };
+  }
+
+  // El número es único por cosecha (cada cosecha numera desde 1).
+  const exists = await prisma.container.findFirst({
+    where: { tenantId, harvestId, number },
+    select: { id: true },
   });
-  if (exists) return { error: `El contenedor #${number} ya existe` };
+  if (exists) return { error: `El contenedor #${number} ya existe en esta cosecha` };
 
   let items: NewItemInput[] = [];
   const itemsRaw = formData.get("items");
@@ -54,6 +67,7 @@ export async function createContainerAction(formData: FormData) {
   const container = await prisma.container.create({
     data: {
       tenantId,
+      harvestId,
       number,
       notes: String(formData.get("notes") || "") || null,
       items: {
@@ -82,10 +96,12 @@ export async function createContainerAction(formData: FormData) {
     action: "container.create",
     entity: "Container",
     entityId: container.id,
-    metadata: { number, itemsCount: items.length },
+    metadata: { number, itemsCount: items.length, harvestId },
   });
 
-  revalidatePath("/administrador/acopio");
+  // Un contenedor en cosecha (staging) todavía no se ve en acopio; revalida la
+  // página de cosechas. Uno suelto va directo a acopio.
+  revalidatePath(harvestId ? "/administrador/operativa/cosechas" : "/administrador/acopio");
   return { ok: true, id: container.id };
 }
 
@@ -243,7 +259,12 @@ export async function addMovementAction(formData: FormData) {
     }),
     prisma.containerItem.update({
       where: { id: containerItemId },
-      data: { currentWeight: newWeight },
+      // Al agotarse (peso <= 0) el bollón se desactiva solo: deja de figurar
+      // como fuente de stock. El admin lo reactiva a mano si lo recarga.
+      data: {
+        currentWeight: newWeight,
+        ...(newWeight <= 1e-6 ? { active: false } : {}),
+      },
     }),
   ]);
 

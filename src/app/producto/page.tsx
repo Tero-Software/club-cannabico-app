@@ -107,8 +107,8 @@ export default function ProductoLanding() {
                 Una app pensada para clubes cannábicos uruguayos.
               </h1>
               <p className="mt-6 text-sm sm:text-base text-[var(--fg-quaternary)] leading-relaxed sm:whitespace-nowrap">
-                Socios, retiros, acopio, trazabilidad y actas de directiva en un
-                solo lugar, con los controles que pide el IRCCA.
+                Control de acopio, trazabilidad y actas de directiva automatizadas en un
+                solo lugar.
               </p>
             </div>
           </div>

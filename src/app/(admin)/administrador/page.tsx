@@ -48,11 +48,14 @@ export default async function AdminHome() {
       : Promise.resolve([] as never[]),
   ]);
 
+  const hayActividad =
+    puedeVerRetiros && (retirosHoy.length > 0 || retirosPendientes.length > 0);
+
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold">Actividades próximas</h1>
 
-      {puedeVerRetiros && (
+      {puedeVerRetiros && (retirosHoy.length > 0 || retirosPendientes.length > 0) && (
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-xl font-semibold">Retiros</h2>
@@ -64,98 +67,26 @@ export default async function AdminHome() {
             </Link>
           </div>
           <div className="card p-0 overflow-hidden">
-            {retirosHoy.length === 0 ? (
-              <EmptyRow>No hay retiros para hoy.</EmptyRow>
-            ) : (
-              retirosHoy.map((r) => <RetiroRow key={r.id} retiro={r} />)
+            {retirosHoy.map((r) => (
+              <RetiroRow key={r.id} retiro={r} />
+            ))}
+
+            {retirosHoy.length > 0 && retirosPendientes.length > 0 && (
+              <div className="border-t border-[var(--border-subtle)]" />
             )}
 
-            <div className="border-t border-[var(--border-subtle)]" />
-
-            {retirosPendientes.length === 0 ? (
-              <EmptyRow>No hay retiros pendientes.</EmptyRow>
-            ) : (
-              retirosPendientes.map((r) => <RetiroRow key={r.id} retiro={r} />)
-            )}
+            {retirosPendientes.map((r) => (
+              <RetiroRow key={r.id} retiro={r} />
+            ))}
           </div>
         </section>
       )}
 
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-semibold">Actas</h2>
-          <Link
-            href="/administrador/directiva/actas"
-            className="text-sm text-[var(--primary)]"
-          >
-            Ver todas →
-          </Link>
-        </div>
-        <div className="card p-0 overflow-hidden">
-          <AvisoRow
-            color="ok"
-            titulo="Asamblea de directiva mensual"
-            detalle="Pendiente de acta. Vence en 4 días."
-          />
-        </div>
-      </section>
-
-      <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-semibold">Trazabilidad</h2>
-          <Link
-            href="/administrador/operativa/trazabilidad"
-            className="text-sm text-[var(--primary)]"
-          >
-            Ver detalle →
-          </Link>
-        </div>
-        <div className="card p-0 overflow-hidden">
-          <AvisoRow
-            color="warning"
-            titulo="2 entradas necesitan atención"
-            detalle="Registrá el seguimiento de las plantas para mantener la cadena al día."
-          />
-        </div>
-      </section>
-    </div>
-  );
-}
-
-function AvisoRow({
-  color,
-  titulo,
-  detalle,
-}: {
-  color: "ok" | "warning" | "danger";
-  titulo: string;
-  detalle: string;
-}) {
-  const dot =
-    color === "warning"
-      ? "var(--warning)"
-      : color === "danger"
-        ? "var(--destructive)"
-        : "var(--primary)";
-  return (
-    <div className="flex items-start gap-3 px-5 py-3">
-      <span
-        aria-hidden
-        className="mt-1.5 h-2 w-2 rounded-full shrink-0"
-        style={{ background: dot }}
-      />
-      <div className="min-w-0">
-        <div className="font-medium">{titulo}</div>
-        <div className="text-sm text-[var(--muted-foreground)]">{detalle}</div>
-      </div>
-    </div>
-  );
-}
-
-function EmptyRow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="px-5 py-3 text-sm text-[var(--muted-foreground)]">
-      {children}
+      {!hayActividad && (
+        <p className="text-[var(--muted-foreground)]">
+          No hay actividades próximas.
+        </p>
+      )}
     </div>
   );
 }

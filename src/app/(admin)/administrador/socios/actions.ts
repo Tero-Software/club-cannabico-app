@@ -242,9 +242,15 @@ export async function toggleSocioActivoAction(formData: FormData) {
   if (!user) return;
 
   const nextActive = !user.active;
+  const now = new Date();
   await prisma.user.update({
     where: { id: user.id },
-    data: { active: nextActive },
+    // Se lleva el historial completo de movimientos: cada baja agrega una fecha
+    // a deactivatedAt; cada reingreso, una a reactivatedAt. Nunca se pisan, para
+    // poder reconstruir altas y bajas de cualquier período (lo usa el acta).
+    data: nextActive
+      ? { active: true, reactivatedAt: { push: now } }
+      : { active: false, deactivatedAt: { push: now } },
   });
 
   await audit({
@@ -257,4 +263,41 @@ export async function toggleSocioActivoAction(formData: FormData) {
   });
 
   revalidatePath("/administrador/socios");
+}
+
+// Asigna (o quita) el plan de membresía propio del socio. Vacío = vuelve a
+// usar el plan por defecto del club.
+export async function setSocioPlanAction(formData: FormData) {
+  const session = await auth();
+  assertCan(session, "socios:manage");
+  const tenantId = session.user.tenantId;
+
+  const id = String(formData.get("id") ?? "");
+  const planIdRaw = String(formData.get("planId") ?? "");
+  const planId = planIdRaw || null;
+
+  const user = await prisma.user.findFirst({ where: { id, tenantId }, select: { id: true, email: true } });
+  if (!user) return { error: "Socio no encontrado" };
+
+  if (planId) {
+    const plan = await prisma.membershipPlan.findFirst({
+      where: { id: planId, tenantId, active: true },
+      select: { id: true },
+    });
+    if (!plan) return { error: "Plan no disponible" };
+  }
+
+  await prisma.user.update({ where: { id }, data: { membershipPlanId: planId } });
+
+  await audit({
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "socio.plan.set",
+    entity: "User",
+    entityId: id,
+    metadata: { email: user.email, planId },
+  });
+
+  revalidatePath(`/administrador/socios/${id}`);
+  return { ok: true as const };
 }

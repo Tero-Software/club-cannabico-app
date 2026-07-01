@@ -5,6 +5,7 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import { DatosEditor } from "./datos-editor";
 import { ToggleActivoSection } from "./toggle-activo";
+import { PlanSelector } from "./plan-selector";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -39,10 +40,23 @@ export default async function SocioDetailPage({
       lastLoginAt: true,
       failedLoginCount: true,
       lockedUntil: true,
+      membershipPlanId: true,
     },
   });
 
   if (!socio) notFound();
+
+  const [plans, defaultPlan] = await Promise.all([
+    prisma.membershipPlan.findMany({
+      where: { tenantId, active: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.membershipPlan.findFirst({
+      where: { tenantId, isDefault: true, active: true },
+      select: { name: true },
+    }),
+  ]);
 
   const logs = await prisma.auditLog.findMany({
     where: { userId: id, tenantId },
@@ -85,6 +99,13 @@ export default async function SocioDetailPage({
           phone: socio.phone,
         }}
         initialEditing={initialEditing}
+      />
+
+      <PlanSelector
+        socioId={socio.id}
+        planId={socio.membershipPlanId}
+        defaultPlanName={defaultPlan?.name ?? null}
+        plans={plans}
       />
 
       <div className="grid sm:grid-cols-3 gap-4 mb-8">

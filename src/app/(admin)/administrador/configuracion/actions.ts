@@ -1,9 +1,11 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { invalidateClubConfig } from "@/lib/config";
+import { audit } from "@/lib/audit";
 
 // Texto opcional de presentación: cadena vacía -> null para no guardar "".
 const optionalText = (max: number) =>
@@ -82,5 +84,51 @@ export async function updateClubConfigAction(
   });
 
   invalidateClubConfig(session.user.tenantId);
+  return { ok: true };
+}
+
+// Fija el plan de membresía por defecto del club (el setting general de cobro).
+// Se aplica a todo socio sin plan propio. Vacío = el club no cobra por defecto.
+export type DefaultPlanState = { ok?: true; error?: string } | null;
+
+export async function setDefaultPlanAction(
+  _prev: DefaultPlanState,
+  fd: FormData,
+): Promise<DefaultPlanState> {
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return { error: "No autorizado" };
+  }
+  const tenantId = session.user.tenantId;
+  const planId = String(fd.get("planId") ?? "") || null;
+
+  if (planId) {
+    const plan = await prisma.membershipPlan.findFirst({
+      where: { id: planId, tenantId, active: true },
+      select: { id: true },
+    });
+    if (!plan) return { error: "Plan no disponible" };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.membershipPlan.updateMany({
+      where: { tenantId, isDefault: true },
+      data: { isDefault: false },
+    });
+    if (planId) {
+      await tx.membershipPlan.update({ where: { id: planId }, data: { isDefault: true } });
+    }
+  });
+
+  await audit({
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "membership.default.set",
+    entity: "MembershipPlan",
+    entityId: planId ?? undefined,
+    metadata: { planId },
+  });
+
+  revalidatePath("/administrador/configuracion");
   return { ok: true };
 }

@@ -134,10 +134,19 @@ export async function consumeReservationsForWithdrawal(
         notes: "Retiro entregado",
       },
     });
-    await tx.containerItem.update({
+    const updated = await tx.containerItem.update({
       where: { id: r.containerItemId },
       data: { currentWeight: { decrement: r.amount } },
+      select: { currentWeight: true },
     });
+    // Al agotarse (peso <= 0) el bollón se desactiva solo: deja de figurar como
+    // fuente de stock. El admin lo reactiva a mano si lo recarga.
+    if (updated.currentWeight <= 1e-6) {
+      await tx.containerItem.update({
+        where: { id: r.containerItemId },
+        data: { active: false },
+      });
+    }
   }
 
   await tx.reservation.deleteMany({

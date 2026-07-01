@@ -19,10 +19,13 @@ export function NewContainerForm({
   strains,
   open,
   onClose,
+  harvestId,
 }: {
   strains: Strain[];
   open: boolean;
   onClose: () => void;
+  // Si se pasa, el contenedor se crea dentro de esa cosecha (staging).
+  harvestId?: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +73,7 @@ export function NewContainerForm({
     fd.set("number", number);
     fd.set("notes", notes);
     fd.set("items", JSON.stringify(cleanItems));
+    if (harvestId) fd.set("harvestId", harvestId);
 
     startTransition(async () => {
       const result = await createContainerAction(fd);

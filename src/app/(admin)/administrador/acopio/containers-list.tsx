@@ -35,16 +35,12 @@ export type Container = {
   id: string;
   number: number;
   notes: string | null;
+  harvestId: string | null;
+  harvestDate: string | null;
   items: Item[];
 };
 
 export type Strain = { id: string; name: string };
-
-function formatPlant(raw: string | null): string | null {
-  if (!raw) return null;
-  const n = raw.replace(/^p/i, "").trim();
-  return n ? `Planta ${n}` : null;
-}
 
 export function ContainersList({
   containers,
@@ -67,8 +63,37 @@ export function ContainersList({
       })
     : containers;
 
+  // Un bloque por cosecha (rotulado con su fecha), más reciente arriba. Los
+  // contenedores sueltos (sin cosecha) van todos juntos en un bloque al final.
+  const byHarvest = new Map<string, Container[]>();
+  const sueltos: Container[] = [];
+  for (const c of filtered) {
+    if (!c.harvestId) {
+      sueltos.push(c);
+      continue;
+    }
+    const list = byHarvest.get(c.harvestId);
+    if (list) list.push(c);
+    else byHarvest.set(c.harvestId, [c]);
+  }
+  // Cosechas ordenadas por fecha descendente.
+  const cosechas = [...byHarvest.entries()].sort((a, b) => {
+    const da = a[1][0].harvestDate ?? "";
+    const db = b[1][0].harvestDate ?? "";
+    return db.localeCompare(da);
+  });
+
+  if (filtered.length === 0) {
+    return (
+      <div className="card px-5 py-6 text-sm text-[var(--muted-foreground)] text-center">
+        Sin resultados para "{query}".
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Encabezados de columna: una sola vez, arriba de todo. */}
       <div className="hidden sm:grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-3 px-5 py-2 text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
         <span>#</span>
         <span>Contenido</span>
@@ -77,23 +102,68 @@ export function ContainersList({
         <span className="text-right">Inicial</span>
         <span className="text-right">Estado</span>
       </div>
-      {filtered.length === 0 ? (
-        <div className="card px-5 py-6 text-sm text-[var(--muted-foreground)] text-center">
-          Sin resultados para "{query}".
-        </div>
-      ) : (
-        <div className="card p-0 overflow-hidden">
-          {filtered.map((c) => (
-            <ContainerRow
-              key={c.id}
-              container={c}
-              strains={strains}
-              expanded={expandedId === c.id}
-              onToggle={() => setExpandedId((prev) => (prev === c.id ? null : c.id))}
-            />
-          ))}
-        </div>
+
+      {cosechas.map(([harvestId, list]) => (
+        <Block
+          key={harvestId}
+          label={formatHarvestDate(list[0].harvestDate)}
+          containers={list}
+          strains={strains}
+          expandedId={expandedId}
+          setExpandedId={setExpandedId}
+        />
+      ))}
+      {sueltos.length > 0 && (
+        <Block
+          label="Sin cosecha"
+          containers={sueltos}
+          strains={strains}
+          expandedId={expandedId}
+          setExpandedId={setExpandedId}
+        />
       )}
+    </div>
+  );
+}
+
+function formatHarvestDate(iso: string | null): string {
+  if (!iso) return "Sin cosecha";
+  return `Cosecha del ${new Intl.DateTimeFormat("es-UY", {
+    dateStyle: "long",
+  }).format(new Date(iso))}`;
+}
+
+function Block({
+  label,
+  containers,
+  strains,
+  expandedId,
+  setExpandedId,
+}: {
+  label: string;
+  containers: Container[];
+  strains: Strain[];
+  expandedId: string | null;
+  setExpandedId: React.Dispatch<React.SetStateAction<string | null>>;
+}) {
+  return (
+    <div>
+      <h2 className="text-[11px] font-normal tracking-wide text-[var(--muted-foreground)] opacity-60 mb-1.5">
+        {label}
+      </h2>
+      <div className="card p-0 overflow-hidden">
+        {containers.map((c) => (
+          <ContainerRow
+            key={c.id}
+            container={c}
+            strains={strains}
+            expanded={expandedId === c.id}
+            onToggle={() =>
+              setExpandedId((prev) => (prev === c.id ? null : c.id))
+            }
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -130,7 +200,6 @@ function ContainerRow({
           </div>
         ) : (
           c.items.map((item, idx) => {
-            const plant = formatPlant(item.plantNumber);
             const locked = itemLocked(item);
             return (
               <div
@@ -146,11 +215,6 @@ function ContainerRow({
                 </span>
                 <span className="text-sm truncate">
                   {item.strainName}
-                  {plant && (
-                    <span className="ml-1 text-xs text-[var(--muted-foreground)]">
-                      {plant}
-                    </span>
-                  )}
                   {locked && (
                     <span className="ml-2 text-xs text-[var(--destructive)] font-semibold">
                       ⚠ No tocar
@@ -336,11 +400,6 @@ function ItemRow({ item }: { item: Item }) {
         <span className="hidden sm:block" aria-hidden />
         <span className="flex items-center gap-2 text-sm flex-wrap min-w-0">
           <span className="font-medium truncate">{item.strainName}</span>
-          {formatPlant(item.plantNumber) && (
-            <span className="text-xs text-[var(--muted-foreground)]">
-              {formatPlant(item.plantNumber)}
-            </span>
-          )}
         </span>
         <span
           className={`text-sm text-right tabular-nums hidden sm:block ${

@@ -9,6 +9,7 @@ import { SavingSpinner } from "@/components/ui/saving-spinner";
 
 type Socio = { id: string; name: string; email: string };
 type Strain = { id: string; name: string };
+type Plan = { id: string; name: string };
 
 export function NuevoRetiroHeader({
   title,
@@ -16,12 +17,14 @@ export function NuevoRetiroHeader({
   socios,
   strains,
   horarios,
+  plans,
 }: {
   title: string;
   subtitle?: string;
   socios: Socio[];
   strains: Strain[];
   horarios: string[];
+  plans: Plan[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -61,6 +64,7 @@ export function NuevoRetiroHeader({
             socios={socios}
             strains={strains}
             horarios={horarios}
+            plans={plans}
             onCreated={() => setOpen(false)}
           />
         </div>
@@ -161,11 +165,13 @@ function NuevoRetiroForm({
   socios,
   strains,
   horarios,
+  plans,
   onCreated,
 }: {
   socios: Socio[];
   strains: Strain[];
   horarios: string[];
+  plans: Plan[];
   onCreated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState<
@@ -174,11 +180,13 @@ function NuevoRetiroForm({
   >(crearRetiroAdminAction, null);
   const formRef = useRef<HTMLFormElement>(null);
   const [items, setItems] = useState<Item[]>([{ strainId: "", amount: 10 }]);
+  const [paid, setPaid] = useState(true);
 
   useEffect(() => {
     if (state?.ok) {
       formRef.current?.reset();
       setItems([{ strainId: "", amount: 10 }]);
+      setPaid(true);
       onCreated?.();
     }
   }, [state, onCreated]);
@@ -319,6 +327,48 @@ function NuevoRetiroForm({
       <div>
         <label htmlFor="nr-notas" className="label">Notas</label>
         <textarea id="nr-notas" name="notas" rows={2} className="input" />
+      </div>
+
+      <input type="hidden" name="pagado" value={paid ? "true" : "false"} />
+      <div className="grid sm:grid-cols-2 gap-3">
+        <div>
+          <span className="label">Forma de pago</span>
+          <div className="flex gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => setPaid(true)}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                paid
+                  ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                  : "border-[var(--border)] hover:bg-[var(--muted)]"
+              }`}
+            >
+              Pagó
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaid(false)}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                !paid
+                  ? "bg-[var(--primary)] text-white border-[var(--primary)]"
+                  : "border-[var(--border)] hover:bg-[var(--muted)]"
+              }`}
+            >
+              No pagó
+            </button>
+          </div>
+        </div>
+        <div>
+          <label htmlFor="nr-plan" className="label">Plan que se cobra</label>
+          <select id="nr-plan" name="planId" className="input">
+            <option value="">Plan del socio (por defecto)</option>
+            {plans.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {state?.error && (

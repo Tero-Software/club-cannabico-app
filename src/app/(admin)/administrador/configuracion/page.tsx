@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ConfigForm } from "./config-form";
+import { CobroForm } from "./cobro-form";
+import { MembresiasManager } from "./membresias-manager";
 
 export const metadata = { title: "Configuración (administrador)" };
 
@@ -10,9 +12,35 @@ export default async function ConfiguracionPage() {
   if (!session) redirect("/login");
   if (session.user.role !== "ADMIN") redirect("/socio");
 
-  const row = await prisma.tenant.findUniqueOrThrow({
-    where: { id: session.user.tenantId },
-  });
+  const tenantId = session.user.tenantId;
+
+  const [row, plans] = await Promise.all([
+    prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } }),
+    prisma.membershipPlan.findMany({
+      where: { tenantId },
+      include: {
+        tiers: { orderBy: { fromGrams: "asc" } },
+        _count: { select: { members: true } },
+      },
+      orderBy: [{ isDefault: "desc" }, { active: "desc" }, { name: "asc" }],
+    }),
+  ]);
+
+  // El manager edita todas las membresías (incluidas inactivas, para reactivarlas).
+  const allPlans = plans.map((p) => ({
+    id: p.id,
+    name: p.name,
+    monthlyPrice: p.monthlyPrice.toNumber(),
+    isDefault: p.isDefault,
+    active: p.active,
+    membersCount: p._count.members,
+    tiers: p.tiers.map((t) => ({ fromGrams: t.fromGrams, price: t.price.toNumber() })),
+  }));
+  // El selector de membresía por defecto solo ofrece las activas.
+  const activePlans = allPlans
+    .filter((p) => p.active)
+    .map((p) => ({ id: p.id, name: p.name, monthlyPrice: p.monthlyPrice, tiers: p.tiers }));
+  const defaultPlanId = plans.find((p) => p.isDefault)?.id ?? null;
 
   return (
     <div>
@@ -37,6 +65,17 @@ export default async function ConfiguracionPage() {
         }}
       />
 
+      <section className="mt-10">
+        <h2 className="text-xl font-semibold mb-1">Membresías</h2>
+        <p className="text-sm text-[var(--muted-foreground)] mb-4">
+          Tipos de cobro del club: cuota mensual y franjas por gramos. Guardá las que uses
+          y elegí cuál se aplica por defecto.
+        </p>
+        <CobroForm plans={activePlans} defaultPlanId={defaultPlanId} />
+        <div className="mt-6">
+          <MembresiasManager plans={allPlans} />
+        </div>
+      </section>
     </div>
   );
 }

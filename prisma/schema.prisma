@@ -40,6 +40,46 @@ enum MovementType {
   OUT
 }
 
+enum MeetingStatus {
+  DRAFT
+  CLOSED
+
+  @@map("EstadoJunta")
+}
+
+// Tipo de reunión: junta de comisión directiva o asamblea general. Comparten
+// estructura (número, fecha, temas); cambia el texto del acta y la numeración,
+// que es independiente por tipo.
+enum MeetingType {
+  DIRECTIVA
+  ASAMBLEA
+
+  @@map("TipoJunta")
+}
+
+// Cargo en los órganos del club. Marca a quién se puede seleccionar como
+// presente en una junta; no se muestra en el acta, solo filtra.
+enum CargoDirectiva {
+  PRESIDENTE
+  SECRETARIO
+  TESORERO
+  SUPLENTE_1
+  SUPLENTE_2
+  SUPLENTE_3
+  SINDICO
+  SINDICO_SUPLENTE
+
+  @@map("CargoDirectiva")
+}
+
+// Naturaleza de un movimiento del libro de finanzas.
+enum FinanceKind {
+  INGRESO
+  EGRESO
+
+  @@map("TipoMovimiento")
+}
+
 model Tenant {
   id                    String   @id @default(cuid())
   slug                  String   @unique
@@ -58,6 +98,9 @@ model Tenant {
   minGramsPerStrain     Int      @default(10)
   gramsStep             Int      @default(10)
   maxActiveMembers      Int      @default(45)
+  // Cadencia de juntas de directiva: cada cuántos días se espera una junta.
+  // 1 mensual ≈ 30 días. Base para avisar juntas pendientes en el inicio.
+  meetingIntervalDays   Int      @default(30)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -73,31 +116,55 @@ model Tenant {
   containerItems  ContainerItem[]
   movements       Movement[]
   applications    Application[]
+  meetings        Meeting[]
+  meetingItems    MeetingItem[]
+  harvests        Harvest[]
+  plants          Plant[]
+  treatments      Treatment[]
+  membershipPlans   MembershipPlan[]
+  membershipTiers   MembershipTier[]
+  financeEntries    FinanceEntry[]
+  memorias          Memoria[]
+  memoriaEntries    MemoriaEntry[]
+  memoriaMilestones MemoriaMilestone[]
 
   @@index([slug])
 }
 
 model User {
-  id                 String    @id @default(cuid())
+  id                 String          @id @default(cuid())
   tenantId           String
-  tenant             Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant             Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   email              String
   passwordHash       String
   name               String
   phone              String?
-  role               Role      @default(MEMBER)
-  permissions        String[]  @default([])
-  active             Boolean   @default(true)
-  isOwner            Boolean   @default(false)
-  mustChangePassword Boolean   @default(false)
+  role               Role            @default(MEMBER)
+  permissions        String[]        @default([])
+  active             Boolean         @default(true)
+  // Historial de bajas: una fecha por cada vez que el socio pasó a inactivo.
+  // Tamaño libre (un socio puede darse de baja varias veces). Vacío = nunca.
+  deactivatedAt      DateTime[]      @default([])
+  // Historial de reingresos: una fecha por cada vez que el socio volvió a
+  // activarse tras una baja. Tamaño libre. Vacío = nunca reingresó.
+  reactivatedAt      DateTime[]      @default([])
+  // Cargo en la directiva/sindicatura. Solo quien tiene cargo es seleccionable
+  // como presente en una junta. Null = socio común.
+  cargo              CargoDirectiva?
+  // Plan de membresía propio del socio (override). Null = se aplica el plan
+  // por defecto del club. Solo se usa si está seteado.
+  membershipPlanId   String?
+  membershipPlan     MembershipPlan? @relation(fields: [membershipPlanId], references: [id], onDelete: SetNull)
+  isOwner            Boolean         @default(false)
+  mustChangePassword Boolean         @default(false)
   totpSecret         String?
-  totpEnabled        Boolean   @default(false)
-  failedLoginCount   Int       @default(0)
+  totpEnabled        Boolean         @default(false)
+  failedLoginCount   Int             @default(0)
   lockedUntil        DateTime?
   lastLoginAt        DateTime?
   expiresAt          DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
   withdrawals        Withdrawal[]
   auditLogs          AuditLog[]
   visitorInvites     VisitorInvite[]
@@ -108,16 +175,16 @@ model User {
 }
 
 model VisitorInvite {
-  id         String    @id @default(cuid())
-  tenantId   String
-  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  token      String    @unique
-  expiresAt  DateTime
-  usedAt     DateTime?
-  userId     String?
-  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdBy  String
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(cuid())
+  tenantId  String
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdBy String
+  createdAt DateTime  @default(now())
 
   @@index([tenantId])
   @@index([expiresAt])
@@ -160,19 +227,20 @@ model AuditLog {
 }
 
 model Strain {
-  id             String          @id @default(cuid())
-  tenantId       String
-  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  code           String?
-  name           String
-  bank           String?
-  description    String?
-  photos         String[]        @default([])
-  sourceUrl      String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  id              String           @id @default(cuid())
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code            String?
+  name            String
+  bank            String?
+  description     String?
+  photos          String[]         @default([])
+  sourceUrl       String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
   withdrawalItems WithdrawalItem[]
-  containerItems ContainerItem[]
+  containerItems  ContainerItem[]
+  plants          Plant[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -180,18 +248,26 @@ model Strain {
 }
 
 model Withdrawal {
-  id        String           @id @default(cuid())
-  tenantId  String
-  tenant    Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  date      DateTime         @map("fecha")
-  timeSlot  String           @map("horario")
-  status    WithdrawalStatus @default(PENDING) @map("estado")
-  notes     String?          @map("notas")
-  items     WithdrawalItem[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id            String           @id @default(cuid())
+  tenantId      String
+  tenant        Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date          DateTime         @map("fecha")
+  timeSlot      String           @map("horario")
+  status        WithdrawalStatus @default(PENDING) @map("estado")
+  notes         String?          @map("notas")
+  // Cobro. El admin verifica la forma de pago al aprobar el retiro: marca si el
+  // socio pagó y qué plan se le aplica. El monto se congela al momento de cobrar
+  // (chargedAmount), para que un cambio posterior de tarifas no altere lo histórico.
+  paid          Boolean          @default(false) @map("pagado")
+  chargedAmount Decimal?         @map("montoCobrado") @db.Decimal(12, 2)
+  appliedPlanId String?          @map("planAplicadoId")
+  appliedPlan   MembershipPlan?  @relation(fields: [appliedPlanId], references: [id], onDelete: SetNull)
+  items         WithdrawalItem[]
+  financeEntry  FinanceEntry?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
 
   @@index([tenantId])
   @@index([userId])
@@ -201,15 +277,15 @@ model Withdrawal {
 }
 
 model WithdrawalItem {
-  id         String     @id @default(cuid())
-  tenantId   String
-  tenant     Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  withdrawalId String   @map("retiroId")
-  withdrawal Withdrawal @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
-  strainId   String     @map("geneticaId")
-  strain     Strain     @relation(fields: [strainId], references: [id])
-  amount     Float      @map("cantidad")
-  movements  Movement[]
+  id           String        @id @default(cuid())
+  tenantId     String
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  withdrawalId String        @map("retiroId")
+  withdrawal   Withdrawal    @relation(fields: [withdrawalId], references: [id], onDelete: Cascade)
+  strainId     String        @map("geneticaId")
+  strain       Strain        @relation(fields: [strainId], references: [id])
+  amount       Float         @map("cantidad")
+  movements    Movement[]
   reservations Reservation[]
 
   @@index([tenantId])
@@ -234,34 +310,61 @@ model Reservation {
   @@index([withdrawalItemId])
 }
 
+// Cosecha. Funciona como staging del acopio: mientras no está declarada, sus
+// contenedores se cargan acá y no son visibles en acopio. Al declararla (la
+// declaración al IRCCA) sus contenedores pasan a acopio. Se identifica por fecha;
+// el acopio se agrupa por el año de la cosecha.
+model Harvest {
+  id         String      @id @default(cuid())
+  tenantId   String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  date       DateTime    @map("fecha")
+  declarada  Boolean     @default(false)
+  notes      String?     @map("notas")
+  containers Container[]
+  plants     Plant[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([tenantId])
+  @@index([date])
+  @@map("Cosecha")
+}
+
 model Container {
   id        String          @id @default(cuid())
   tenantId  String
   tenant    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  // Cosecha a la que pertenece. Null = contenedor suelto (datos previos a cosechas).
+  harvestId String?         @map("cosechaId")
+  harvest   Harvest?        @relation(fields: [harvestId], references: [id], onDelete: SetNull)
   number    Int
   notes     String?
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   items     ContainerItem[]
 
-  @@unique([tenantId, number])
+  // Número único por cosecha: cada cosecha numera sus contenedores desde 1. Los
+  // sueltos (harvestId null) no chocan entre sí en Postgres (los NULL no colisionan).
+  @@unique([tenantId, harvestId, number])
   @@index([tenantId])
+  @@index([harvestId])
 }
 
 model ContainerItem {
-  id            String     @id @default(cuid())
+  id            String        @id @default(cuid())
   tenantId      String
-  tenant        Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant        Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   containerId   String
-  container     Container  @relation(fields: [containerId], references: [id], onDelete: Cascade)
+  container     Container     @relation(fields: [containerId], references: [id], onDelete: Cascade)
   strainId      String?
-  strain        Strain?    @relation(fields: [strainId], references: [id])
+  strain        Strain?       @relation(fields: [strainId], references: [id])
   plantNumber   String?
   initialWeight Float
   currentWeight Float
-  active        Boolean    @default(false)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  active        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
   movements     Movement[]
   reservations  Reservation[]
 
@@ -271,17 +374,17 @@ model ContainerItem {
 }
 
 model Movement {
-  id              String        @id @default(cuid())
-  tenantId        String
-  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  containerItemId String
-  containerItem   ContainerItem @relation(fields: [containerItemId], references: [id], onDelete: Cascade)
-  type            MovementType
-  amount          Float
+  id               String          @id @default(cuid())
+  tenantId         String
+  tenant           Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  containerItemId  String
+  containerItem    ContainerItem   @relation(fields: [containerItemId], references: [id], onDelete: Cascade)
+  type             MovementType
+  amount           Float
   withdrawalItemId String?
-  withdrawalItem  WithdrawalItem? @relation(fields: [withdrawalItemId], references: [id])
-  notes           String?
-  createdAt       DateTime      @default(now())
+  withdrawalItem   WithdrawalItem? @relation(fields: [withdrawalItemId], references: [id])
+  notes            String?
+  createdAt        DateTime        @default(now())
 
   @@index([tenantId])
   @@index([containerItemId, createdAt])
@@ -306,4 +409,238 @@ model Application {
   @@index([status])
   @@index([createdAt])
   @@map("Postulacion")
+}
+
+// Junta de comisión directiva o asamblea general. Produce un acta. Se inicia en
+// estado DRAFT (borrador editable) y al terminarse pasa a CLOSED (acta cerrada).
+// El número es correlativo por club y por tipo.
+model Meeting {
+  id        String        @id @default(cuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type      MeetingType   @default(DIRECTIVA) @map("tipo")
+  number    Int           @map("numero")
+  date      DateTime      @map("fecha")
+  // Presentes: nombres tal como firman el acta (presidente, tesorera, etc.).
+  attendees String[]      @map("presentes")
+  status    MeetingStatus @default(DRAFT) @map("estado")
+  items     MeetingItem[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@unique([tenantId, type, number])
+  @@index([tenantId])
+  @@index([date])
+  @@index([status])
+  @@map("Junta")
+}
+
+// Tema tratado en una junta. Solo datos reales: el tema y su contenido en texto.
+// Se tratan en el orden en que se agregan (la junta transcurre en vivo), así que
+// el orden es el de `createdAt`; recorrerlos produce el índice y el desglose.
+model MeetingItem {
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  meetingId String   @map("juntaId")
+  meeting   Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  title     String   @map("tema")
+  body      String   @default("") @map("contenido")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([meetingId])
+  @@map("JuntaItem")
+}
+
+// Plan/prefab de membresía del club. Define cómo se cobra a un socio. El club
+// guarda los planes que usa (membresía normal, reducida, etc.). Uno puede ser
+// el plan por defecto del club (isDefault); ese se aplica a todo socio que no
+// tenga un plan propio asignado.
+//
+// Cobro: una membresía tiene un precio mensual (la cuota completa, que se cobra
+// cuando el socio retira el cupo máximo del mes) y una tabla de franjas por
+// gramos para los retiros parciales. Ambas conviven en el mismo plan.
+model MembershipPlan {
+  id           String           @id @default(cuid())
+  tenantId     String
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name         String           @map("nombre")
+  // Cuota mensual completa. Se cobra cuando el retiro alcanza el cupo máximo
+  // mensual del club. Por debajo, se cobra por franja.
+  monthlyPrice Decimal          @map("cuotaMensual") @db.Decimal(12, 2)
+  // Si es el plan por defecto del club. Único por tenant (índice parcial en SQL).
+  isDefault    Boolean          @default(false) @map("porDefecto")
+  active       Boolean          @default(true) @map("activo")
+  tiers        MembershipTier[]
+  members      User[]
+  withdrawals  Withdrawal[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([tenantId])
+  @@map("PlanMembresia")
+}
+
+// Franja por gramos de una membresía. Cobro por franja: el retiro paga el precio
+// de la mayor franja cuyo `fromGrams` no supera los gramos retirados. Ej.: franjas
+// 1g=$200, 10g=$1800, 20g=$3200; retirar 15 g cae en la franja de 10 g y paga
+// $1800. Los saltos son libres (cada club define sus filas). Al alcanzar el cupo
+// mensual del club se cobra la cuota mensual del plan, no una franja.
+model MembershipTier {
+  id        String         @id @default(cuid())
+  tenantId  String
+  tenant    Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      MembershipPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  fromGrams Float          @map("desdeGramos")
+  price     Decimal        @map("precio") @db.Decimal(12, 2)
+
+  @@index([tenantId])
+  @@index([planId])
+  @@map("TramoMembresia")
+}
+
+// Movimiento del libro de finanzas: un ingreso o egreso con fecha, rubro,
+// descripción y monto. Los ingresos por retiro pagado se crean automáticamente
+// y quedan ligados al retiro (withdrawalId); el resto se carga a mano. La
+// pantalla agrupa por mes (ejercicio) y produce la versión imprimible.
+model FinanceEntry {
+  id           String      @id @default(cuid())
+  tenantId     String
+  tenant       Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  date         DateTime    @map("fecha")
+  kind         FinanceKind @map("tipo")
+  category     String      @map("rubro")
+  description  String      @map("descripcion")
+  amount       Decimal     @map("monto") @db.Decimal(12, 2)
+  // Si el ingreso proviene de un retiro cobrado. Único: un retiro genera a lo
+  // sumo un asiento. Null = movimiento manual.
+  withdrawalId String?     @unique @map("retiroId")
+  withdrawal   Withdrawal? @relation(fields: [withdrawalId], references: [id], onDelete: SetNull)
+  createdById  String      @map("creadoPorId")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([tenantId, date])
+  @@index([tenantId, kind])
+  @@map("MovimientoFinanciero")
+}
+
+// Trazabilidad (registro que exige el IRCCA). Una fila por planta con las fechas
+// de cada etapa del ciclo: germinación, maceta, bancal, flora y cosecha. El
+// rendimiento (en gramos) y las observaciones ("no prosperó", etc.) cierran la
+// ficha. Las etapas son fijas: no es un evento libre, es exactamente lo que pide
+// la planilla del IRCCA. Una planta pertenece a una cosecha y a una genética.
+model Plant {
+  id           String    @id @default(cuid())
+  tenantId     String
+  tenant       Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  harvestId    String?   @map("cosechaId")
+  harvest      Harvest?  @relation(fields: [harvestId], references: [id], onDelete: SetNull)
+  strainId     String?   @map("geneticaId")
+  strain       Strain?   @relation(fields: [strainId], references: [id], onDelete: SetNull)
+  number       Int       @map("numero")
+  germinatedAt DateTime? @map("germinacion")
+  pottedAt     DateTime? @map("maceta")
+  bedAt        DateTime? @map("bancal")
+  floweredAt   DateTime? @map("flora")
+  harvestedAt  DateTime? @map("cosecha")
+  // Rendimiento en gramos. Null mientras no se cosechó.
+  yield        Float?    @map("rendimiento")
+  notes        String?   @map("observaciones")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([harvestId])
+  @@index([strainId])
+  @@map("Planta")
+}
+
+// Sanitaria (registro que exige el IRCCA). Un tratamiento aplicado en una fecha,
+// con su descripción. Se aplica a todas las plantas (appliesToAll) o a una planta
+// puntual (plantId). En la planilla original la columna "nº planta" vale "todos"
+// o un número; acá eso se modela con el flag y la relación opcional.
+model Treatment {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  date         DateTime @map("fecha")
+  description  String   @map("tratamiento")
+  appliesToAll Boolean  @default(true) @map("todas")
+  plantId      String?  @map("plantaId")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([tenantId, date])
+  @@map("Sanitaria")
+}
+
+// Tipo de hito de una memoria. Sirve para la lógica de display: cada tipo se
+// renderiza distinto.
+//   EVENTO           → hito grabable: tema + desarrollo, carga manual. Se
+//                      persiste como fila en MemoriaMilestone.
+//   MOVIMIENTO_SOCIO → hito NO grabable: no ocupa lugar en la tabla. Se deriva
+//                      de User (altas por createdAt, bajas). Existe en el enum
+//                      solo para que el display lo distinga y lo muestre.
+// Memoria anual del club: el documento que resume un ejercicio (período 01/04 al
+// 31/03). Lleva un resumen general del período y un cuerpo dividido por mes con
+// los hitos de cada mes. Arranca en DRAFT (borrador editable) y al cerrar el
+// ejercicio pasa a CLOSED. Un ejercicio por año, único por club. El año es el
+// del inicio del período (ejercicio 2025 = 01/04/2025 a 31/03/2026).
+model Memoria {
+  id          String         @id @default(cuid())
+  tenantId    String
+  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  year        Int            @map("ejercicio")
+  periodStart DateTime       @map("periodoInicio")
+  periodEnd   DateTime       @map("periodoFin")
+  summary     String         @default("") @map("resumen")
+  status      MeetingStatus  @default(DRAFT) @map("estado")
+  entries     MemoriaEntry[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@unique([tenantId, year])
+  @@index([tenantId])
+  @@map("Memoria")
+}
+
+// Entrada mensual de una memoria: un mes del ejercicio. Agrupa los hitos de ese
+// mes. El mes es 1-12; el orden cronológico se arma con el año del ejercicio.
+model MemoriaEntry {
+  id         String             @id @default(cuid())
+  tenantId   String
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  memoriaId  String
+  memoria    Memoria            @relation(fields: [memoriaId], references: [id], onDelete: Cascade)
+  month      Int                @map("mes")
+  milestones MemoriaMilestone[]
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@unique([memoriaId, month])
+  @@index([tenantId])
+  @@index([memoriaId])
+  @@map("MemoriaEntrada")
+}
+
+// Hito de un mes de la memoria: un tema (title) y su desarrollo (body), de carga
+// manual. Se ordenan por `createdAt` dentro del mes.
+model MemoriaMilestone {
+  id        String        @id @default(cuid())
+  tenantId  String
+  tenant    Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entryId   String        @map("entradaId")
+  entry     MemoriaEntry  @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  title     String        @default("") @map("tema")
+  body      String        @default("") @map("desarrollo")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([tenantId])
+  @@index([entryId])
+  @@map("MemoriaHito")
 }

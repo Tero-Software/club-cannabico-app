@@ -13,6 +13,8 @@ import {
   consumeReservationsForWithdrawal,
   InsufficientStockError,
 } from "@/lib/reservations";
+import { computeWithdrawalCharge } from "@/lib/billing";
+import { resolvePlanForMember } from "@/lib/billing-server";
 import type { WithdrawalStatus } from "@/generated/prisma/enums";
 
 const VALID_ESTADOS: WithdrawalStatus[] = [
@@ -41,7 +43,14 @@ export async function updateWithdrawalStatusAction(
 
   const prev = await prisma.withdrawal.findFirst({
     where: { id, tenantId },
-    select: { status: true, userId: true, user: { select: { role: true } } },
+    select: {
+      status: true,
+      userId: true,
+      date: true,
+      paid: true,
+      chargedAmount: true,
+      user: { select: { role: true, name: true } },
+    },
   });
   if (!prev) return;
   if (prev.status === next) return;
@@ -64,6 +73,31 @@ export async function updateWithdrawalStatusAction(
         await consumeReservationsForWithdrawal(tx, id, tenantId);
       } else if (leavingReserved) {
         await releaseReservationsForWithdrawal(tx, id, tenantId);
+      }
+
+      // El ingreso al libro se asienta al completar el retiro, si el socio pagó
+      // y hay un monto congelado (calculado al aprobar). Idempotente por el único
+      // withdrawalId. Si se sale de COMPLETED (reabrir/cancelar), se quita.
+      if (next === "COMPLETED") {
+        const charge = prev.chargedAmount ? prev.chargedAmount.toNumber() : 0;
+        if (prev.paid && charge > 0) {
+          await tx.financeEntry.upsert({
+            where: { withdrawalId: id },
+            create: {
+              tenantId,
+              date: prev.date,
+              kind: "INGRESO",
+              category: "Membresía",
+              description: `Cobro de retiro — ${prev.user.name}`,
+              amount: charge,
+              withdrawalId: id,
+              createdById: session.user.id,
+            },
+            update: {},
+          });
+        }
+      } else if (prev.status === "COMPLETED") {
+        await tx.financeEntry.deleteMany({ where: { tenantId, withdrawalId: id } });
       }
 
       await tx.withdrawal.update({
@@ -90,6 +124,91 @@ export async function updateWithdrawalStatusAction(
   revalidatePath("/administrador");
   revalidatePath("/administrador/retiros");
   revalidatePath("/administrador/acopio");
+  revalidatePath("/administrador/directiva/finanzas");
+  return { ok: true };
+}
+
+/**
+ * Aprueba un retiro PENDING verificando la forma de pago. El admin marca si el
+ * socio pagó y con qué plan se cobra (por defecto, el que le corresponde al
+ * socio). El monto se congela en el retiro; si está pagado, se asienta el
+ * ingreso en el libro de finanzas, ligado al retiro.
+ */
+export async function approveWithdrawalAction(
+  formData: FormData,
+): Promise<Result | void> {
+  const session = await auth();
+  assertCan(session, "retiros:manage");
+  const tenantId = session.user.tenantId;
+
+  const id = String(formData.get("id") ?? "");
+  const paid = formData.get("paid") === "true";
+  const planIdInput = String(formData.get("planId") ?? "") || null;
+
+  const w = await prisma.withdrawal.findFirst({
+    where: { id, tenantId },
+    select: {
+      status: true,
+      userId: true,
+      date: true,
+      user: { select: { role: true, name: true, membershipPlanId: true } },
+      items: { select: { amount: true } },
+    },
+  });
+  if (!w) return { error: "Retiro no encontrado" };
+  if (w.user.role === "VISITANTE") {
+    return { error: "Este retiro es de demostración y no se puede modificar." };
+  }
+  if (w.status !== "PENDING") {
+    return { error: "El retiro ya no está pendiente." };
+  }
+
+  // Plan: el elegido a mano en la aprobación, o el que le toca al socio.
+  const planId = planIdInput ?? w.user.membershipPlanId;
+  const [plan, config] = await Promise.all([
+    resolvePlanForMember(tenantId, planId),
+    getClubConfig(tenantId),
+  ]);
+  const totalGrams = w.items.reduce((s, i) => s + i.amount, 0);
+  const charge = plan
+    ? computeWithdrawalCharge(plan, totalGrams, config.maxGramosMes)
+    : null;
+
+  // En la aprobación solo se congela la forma de pago (pagó/no), el monto y el
+  // plan aplicado. El ingreso al libro se asienta recién al completar el retiro.
+  try {
+    await prisma.$transaction(async (tx) => {
+      await reserveForWithdrawal(tx, id, tenantId);
+      await tx.withdrawal.update({
+        where: { id },
+        data: {
+          status: "APPROVED",
+          paid,
+          chargedAmount: charge,
+          appliedPlanId: plan?.id ?? null,
+        },
+      });
+    });
+  } catch (err) {
+    if (err instanceof InsufficientStockError) {
+      return { error: err.message };
+    }
+    throw err;
+  }
+
+  await audit({
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "retiro.approve",
+    entity: "Retiro",
+    entityId: id,
+    metadata: { socioId: w.userId, paid, planId: plan?.id ?? null, charge },
+  });
+
+  revalidatePath("/administrador");
+  revalidatePath("/administrador/retiros");
+  revalidatePath("/administrador/acopio");
+  revalidatePath("/administrador/directiva/finanzas");
   return { ok: true };
 }
 
@@ -157,7 +276,7 @@ export async function crearRetiroAdminAction(
 
   const socio = await prisma.user.findFirst({
     where: { id: userId, tenantId },
-    select: { id: true, role: true, active: true, name: true, email: true },
+    select: { id: true, role: true, active: true, name: true, email: true, membershipPlanId: true },
   });
   if (!socio || socio.role !== "MEMBER") {
     return { fieldErrors: { userId: "Socio no encontrado" } };
@@ -206,6 +325,16 @@ export async function crearRetiroAdminAction(
     };
   }
 
+  // Cobro: el admin marca si el socio pagó y con qué plan (por defecto, el del
+  // socio). El alta admin nace APPROVED, así que el cobro se resuelve acá mismo.
+  const paid = formData.get("pagado") === "true";
+  const planIdInput = String(formData.get("planId") ?? "") || null;
+  const planId = planIdInput ?? socio.membershipPlanId;
+  const plan = await resolvePlanForMember(tenantId, planId);
+  const charge = plan
+    ? computeWithdrawalCharge(plan, totalGramos, config.maxGramosMes)
+    : null;
+
   try {
     const created = await prisma.$transaction(async (tx) => {
       const w = await tx.withdrawal.create({
@@ -216,6 +345,9 @@ export async function crearRetiroAdminAction(
           timeSlot,
           status: "APPROVED",
           notes: notes ? String(notes) : null,
+          paid,
+          chargedAmount: charge,
+          appliedPlanId: plan?.id ?? null,
           items: {
             create: validItems.map((i) => ({
               tenantId,
@@ -226,6 +358,8 @@ export async function crearRetiroAdminAction(
         },
       });
       await reserveForWithdrawal(tx, w.id, tenantId);
+      // El retiro nace APPROVED; el ingreso al libro se asienta al completarlo,
+      // no acá. Solo se congela paid/chargedAmount/plan en el retiro.
       return w;
     });
 
@@ -240,6 +374,8 @@ export async function crearRetiroAdminAction(
         socioEmail: socio.email,
         totalGramos,
         status: "APPROVED",
+        paid,
+        charge,
       },
     });
   } catch (err) {
@@ -252,5 +388,6 @@ export async function crearRetiroAdminAction(
   revalidatePath("/administrador");
   revalidatePath("/administrador/retiros");
   revalidatePath("/administrador/acopio");
+  revalidatePath("/administrador/directiva/finanzas");
   return { ok: true };
 }

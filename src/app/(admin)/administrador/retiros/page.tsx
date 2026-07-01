@@ -5,8 +5,10 @@ import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import { getClubConfig } from "@/lib/config";
 import { formatDate, formatGramos, estadoBadgeClass, estadoLabel } from "@/lib/format";
+import { formatMoney } from "@/lib/billing";
 import type { WithdrawalStatus } from "@/generated/prisma/enums";
 import { EstadoButton } from "./estado-button";
+import { AprobarCobro } from "./aprobar-cobro";
 import { NuevoRetiroHeader } from "./nuevo-retiro-toggle";
 
 export const metadata = { title: "Retiros (administrador)" };
@@ -40,7 +42,7 @@ export default async function AdminRetirosPage({
         ? { status: { in: ["PENDING", "APPROVED"] as WithdrawalStatus[] } }
         : { status: filtro as WithdrawalStatus };
 
-  const [retiros, socios, containerItems, config] = await Promise.all([
+  const [retiros, socios, containerItems, config, plans] = await Promise.all([
     prisma.withdrawal.findMany({
       where: { tenantId, ...statusWhere },
       include: {
@@ -63,6 +65,11 @@ export default async function AdminRetirosPage({
       },
     }),
     getClubConfig(tenantId),
+    prisma.membershipPlan.findMany({
+      where: { tenantId, active: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   const strainFreeMap = new Map<string, { id: string; name: string }>();
@@ -89,6 +96,7 @@ export default async function AdminRetirosPage({
         socios={socios}
         strains={strains}
         horarios={config.horarios}
+        plans={plans}
       />
 
       <div className="flex flex-wrap gap-2 mb-6">
@@ -149,6 +157,18 @@ export default async function AdminRetirosPage({
                       {r.notes}
                     </div>
                   )}
+                  {r.status !== "PENDING" && !isDemo && (
+                    <div className="flex items-center gap-2 mt-2 text-sm">
+                      <span className={r.paid ? "badge badge-aprobado" : "badge badge-pendiente"}>
+                        {r.paid ? "Pagó" : "No pagó"}
+                      </span>
+                      {r.chargedAmount != null && (
+                        <span className="text-[var(--muted-foreground)]">
+                          {formatMoney(r.chargedAmount.toNumber())}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
@@ -160,7 +180,7 @@ export default async function AdminRetirosPage({
                   <>
                     {r.status === "PENDING" && (
                       <>
-                        <EstadoButton id={r.id} status="APPROVED" label="Aprobar" variant="primary" />
+                        <AprobarCobro id={r.id} plans={plans} />
                         <EstadoButton id={r.id} status="REJECTED" label="Rechazar" variant="destructive" />
                       </>
                     )}

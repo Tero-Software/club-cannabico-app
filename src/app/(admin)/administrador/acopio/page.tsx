@@ -15,9 +15,15 @@ export default async function ContainersPage() {
   const tenantId = session!.user.tenantId;
   const [containersRaw, strains] = await Promise.all([
     prisma.container.findMany({
-      where: { tenantId },
+      // Acopio muestra contenedores ya en acopio: los sueltos (sin cosecha) y los
+      // de cosechas declaradas. Los de cosechas en staging viven en Cosecha.
+      where: {
+        tenantId,
+        OR: [{ harvestId: null }, { harvest: { declarada: true } }],
+      },
       orderBy: { number: "asc" },
       include: {
+        harvest: { select: { date: true } },
         items: {
           include: {
             strain: { select: { id: true, name: true } },
@@ -39,6 +45,10 @@ export default async function ContainersPage() {
     id: c.id,
     number: c.number,
     notes: c.notes,
+    // Bloque en acopio: uno por cosecha (rotulado con su fecha). Los sueltos
+    // (sin cosecha) van todos juntos en un bloque al final.
+    harvestId: c.harvestId,
+    harvestDate: c.harvest?.date.toISOString() ?? null,
     items: c.items.map((item) => ({
       id: item.id,
       strainName: item.strain?.name ?? "Sin genética",
