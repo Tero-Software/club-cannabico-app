@@ -57,7 +57,7 @@
   --shadow-lg: 0px 7px 24px #0000000f;
 
   /* Radios (escala de Linear). */
-  --radius-sm: 6px;
+  --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
 
@@ -72,11 +72,13 @@
 
 html[data-theme="light"] {
   /* Análogo del dark con la escala light de Linear (bg-level-0..3): el canvas es
-     lo más claro y cada nivel baja hacia el gris. */
-  --level-0: #ffffff;
-  --level-1: #f8f8f8;
-  --level-2: #f4f4f4;
-  --level-3: #f0f0f0;
+     lo más claro y cada nivel baja hacia el gris. El canvas no es blanco puro
+     (encandila): arranca en un gris muy suave y las superficies elevadas suben
+     hacia el blanco para conservar el contraste por elevación. */
+  --level-0: #f7f7f6;
+  --level-1: #f3f3f2;
+  --level-2: #efefee;
+  --level-3: #eaeae9;
 
   --background: var(--level-0);
   --surface-1: var(--level-1);
@@ -91,10 +93,10 @@ html[data-theme="light"] {
   --fg-quaternary: #86848d;
   --muted-foreground: #6f6e77;
 
-  --border: #e9e8ea;
-  --border-subtle: #e9e8ea;
-  --border-strong: #e4e2e4;
-  --border-tertiary: #dcdbdd;
+  --border: #dcdcda;
+  --border-subtle: #e0e0de;
+  --border-strong: #d4d4d2;
+  --border-tertiary: #cacac8;
 
   --accent: #3d6844;
   --accent-hover: #4a7a52;
@@ -444,8 +446,8 @@ input[type="datetime-local"].input {
 .card {
   background: var(--surface-3);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  padding: 0.8rem;
   box-shadow: var(--shadow-sm);
 }
 

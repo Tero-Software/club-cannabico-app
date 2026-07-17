@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { deleteFinanceEntryAction } from "./actions";
 import { formatMoney } from "@/lib/billing";
 import { SavingSpinner } from "@/components/ui/saving-spinner";
+import { DataTable, type Column } from "@/components/ui/data-table";
 
 export type LibroEntry = {
   id: string;
@@ -40,59 +41,62 @@ export function LibroMes({ entries }: { entries: LibroEntry[] }) {
     );
   }
 
+  const columns: Column<LibroEntry>[] = [
+    {
+      label: "Fecha",
+      muted: true,
+      cellClassName: "whitespace-nowrap",
+      cell: (e) => fmtDate(e.date),
+    },
+    { label: "Rubro", cell: (e) => e.category },
+    {
+      label: "Descripción",
+      cell: (e) => (
+        <>
+          {e.description}
+          {e.fromWithdrawal && (
+            <span className="ml-2 badge badge-completado text-xs">Retiro</span>
+          )}
+        </>
+      ),
+    },
+    {
+      label: "Debe",
+      align: "right",
+      cellClassName: "tabular-nums",
+      cell: (e) => (e.kind === "EGRESO" ? formatMoney(e.amount) : "—"),
+    },
+    {
+      label: "Haber",
+      align: "right",
+      cellClassName: "tabular-nums",
+      cell: (e) => (e.kind === "INGRESO" ? formatMoney(e.amount) : "—"),
+    },
+    {
+      label: "",
+      align: "right",
+      width: "3rem",
+      cell: (e) => (!e.fromWithdrawal ? <DeleteButton id={e.id} /> : null),
+    },
+  ];
+
   return (
     <div className="space-y-4">
-      <div className="card p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-[var(--muted)] text-left">
-              <tr>
-                <th className="px-4 py-3 font-medium">Fecha</th>
-                <th className="px-4 py-3 font-medium">Rubro</th>
-                <th className="px-4 py-3 font-medium">Descripción</th>
-                <th className="px-4 py-3 font-medium text-right">Debe</th>
-                <th className="px-4 py-3 font-medium text-right">Haber</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {entries.map((e) => (
-                <tr key={e.id} className="border-t border-[var(--border)]">
-                  <td className="px-4 py-2.5 whitespace-nowrap text-[var(--muted-foreground)]">
-                    {fmtDate(e.date)}
-                  </td>
-                  <td className="px-4 py-2.5">{e.category}</td>
-                  <td className="px-4 py-2.5">
-                    {e.description}
-                    {e.fromWithdrawal && (
-                      <span className="ml-2 badge badge-completado text-xs">Retiro</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">
-                    {e.kind === "EGRESO" ? formatMoney(e.amount) : "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">
-                    {e.kind === "INGRESO" ? formatMoney(e.amount) : "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    {!e.fromWithdrawal && <DeleteButton id={e.id} />}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-[var(--border)] font-medium">
-                <td className="px-4 py-3" colSpan={3}>
-                  Totales del mes
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums">{formatMoney(totalEgresos)}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{formatMoney(totalIngresos)}</td>
-                <td className="px-4 py-3" />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+      <DataTable
+        columns={columns}
+        rows={entries}
+        getRowKey={(e) => e.id}
+        footer={
+          <tr className="border-t-2 border-[var(--border)] font-medium">
+            <td className="px-4 py-3" colSpan={3}>
+              Totales del mes
+            </td>
+            <td className="px-4 py-3 text-right tabular-nums">{formatMoney(totalEgresos)}</td>
+            <td className="px-4 py-3 text-right tabular-nums">{formatMoney(totalIngresos)}</td>
+            <td className="px-4 py-3" />
+          </tr>
+        }
+      />
 
       <div className="card flex items-center justify-between">
         <span className="font-medium">Saldo del mes</span>

@@ -10,6 +10,7 @@ import {
   updateContainerAction,
 } from "./actions";
 import { SavingSpinner } from "@/components/ui/saving-spinner";
+import { PencilIcon } from "@/components/ui/icons";
 
 export type Movement = {
   id: string;
@@ -92,16 +93,10 @@ export function ContainersList({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Encabezados de columna: una sola vez, arriba de todo. */}
-      <div className="hidden sm:grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-3 px-5 py-2 text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
-        <span>#</span>
-        <span>Contenido</span>
-        <span className="text-right">Reservado</span>
-        <span className="text-right">Actual</span>
-        <span className="text-right">Inicial</span>
-        <span className="text-right">Estado</span>
-      </div>
+    <div className="space-y-3">
+      <h2 className="text-sm font-semibold text-[var(--muted-foreground)] px-1">
+        Cosechas
+      </h2>
 
       {cosechas.map(([harvestId, list]) => (
         <Block
@@ -126,6 +121,28 @@ export function ContainersList({
   );
 }
 
+/** Flecha estilo tree: apunta a la derecha y rota 90° hacia abajo al abrir. */
+function TreeChevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      className={`text-[var(--muted-foreground)] shrink-0 transition-transform duration-150 ${
+        open ? "rotate-90" : ""
+      }`}
+    >
+      <polyline points="9 6 15 12 9 18" />
+    </svg>
+  );
+}
+
 function formatHarvestDate(iso: string | null): string {
   if (!iso) return "Sin cosecha";
   return `Cosecha del ${new Intl.DateTimeFormat("es-UY", {
@@ -146,24 +163,58 @@ function Block({
   expandedId: string | null;
   setExpandedId: React.Dispatch<React.SetStateAction<string | null>>;
 }) {
+  const [open, setOpen] = useState(true);
+
   return (
-    <div>
-      <h2 className="text-[11px] font-normal tracking-wide text-[var(--muted-foreground)] opacity-60 mb-1.5">
-        {label}
-      </h2>
-      <div className="card p-0 overflow-hidden">
-        {containers.map((c) => (
-          <ContainerRow
-            key={c.id}
-            container={c}
-            strains={strains}
-            expanded={expandedId === c.id}
-            onToggle={() =>
-              setExpandedId((prev) => (prev === c.id ? null : c.id))
-            }
-          />
-        ))}
+    <div className="card p-0">
+      {/* Header del bloque (fecha + nombres de columna) anclado arriba mientras
+          la cosecha esté en pantalla; el bloque se lo lleva al terminar. */}
+      <div className="sticky top-0 z-10 bg-[var(--surface-3)]">
+        {/* Título del bloque: la fecha de la cosecha, con flecha tree que
+            despliega/pliega sus contenedores. */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-[var(--surface-2)] transition-colors"
+        >
+          <span className="text-sm font-medium">{label}</span>
+          <span className="ml-auto mr-3 text-xs text-[var(--muted-foreground)]">
+            {containers.length} {containers.length === 1 ? "contenedor" : "contenedores"}
+          </span>
+          <span className="w-[1.3rem] flex justify-end shrink-0">
+            <TreeChevron open={open} />
+          </span>
+        </button>
+
+        {open && (
+          <div className="hidden sm:grid sm:grid-cols-[4.0rem_1fr_7rem_7rem_7rem_7rem_5rem] gap-3 px-5 py-2 text-[0.7rem] font-normal text-[var(--fg-quaternary)] uppercase tracking-wide">
+            <span>#</span>
+            <span>Contenido</span>
+            <span className="text-right">Reservado</span>
+            <span className="text-right">Actual</span>
+            <span className="text-right">Inicial</span>
+            <span className="text-right">Estado</span>
+            <span aria-hidden />
+          </div>
+        )}
       </div>
+
+      {open && (
+        <div>
+          {containers.map((c) => (
+            <ContainerRow
+              key={c.id}
+              container={c}
+              strains={strains}
+              expanded={expandedId === c.id}
+              onToggle={() =>
+                setExpandedId((prev) => (prev === c.id ? null : c.id))
+              }
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -188,13 +239,9 @@ function ContainerRow({
 
   return (
     <div className="border-t border-[var(--border-subtle)] first-of-type:border-t-0">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full text-left"
-      >
+      <div className="relative">
         {(single ? c.items.slice(0, 1) : c.items).length === 0 ? (
-          <div className="grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-1 sm:gap-3 items-center px-5 py-3 hover:bg-[var(--surface-2)] transition-colors">
+          <div className="grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem_2.5rem] gap-1 sm:gap-3 items-center px-5 py-3">
             <span className="font-bold tabular-nums">{c.number}</span>
             <span className="text-sm text-[var(--muted-foreground)]">Vacío</span>
           </div>
@@ -204,10 +251,10 @@ function ContainerRow({
             return (
               <div
                 key={item.id}
-                className={`grid sm:grid-cols-[3.5rem_1fr_7rem_7rem_7rem_5rem] gap-1 sm:gap-3 items-center px-5 py-3 hover:bg-[var(--surface-2)] transition-colors ${
+                className={`grid sm:grid-cols-[4.0rem_1fr_7rem_7rem_7rem_7rem_5rem] gap-1 sm:gap-3 items-center px-5 py-3 ${
                   !item.active ? "opacity-60" : ""
                 } ${locked ? "bg-[color-mix(in_oklab,var(--destructive)_8%,transparent)]" : ""} ${
-                  idx > 0 ? "border-t border-[var(--border-subtle)] sm:[border-image:linear-gradient(to_right,transparent_3.5rem,var(--border-subtle)_3.5rem)_1]" : ""
+                  idx > 0 ? "border-t border-[var(--border-subtle)] sm:[border-image:linear-gradient(to_right,transparent_3.5rem,var(--border-subtle)_3.5rem,var(--border-subtle)_calc(100%-5rem),transparent_calc(100%-5rem))_1]" : ""
                 }`}
               >
                 <span className="font-bold tabular-nums">
@@ -230,11 +277,21 @@ function ContainerRow({
                 <span className="text-right">
                   <ContainerState active={item.active} />
                 </span>
+                {/* Botón de editar solo en la primera fila del contenedor. */}
+                <span className="hidden sm:flex justify-end">
+                  {idx === 0 && (
+                    <EditButton expanded={expanded} onClick={onToggle} />
+                  )}
+                </span>
               </div>
             );
           })
         )}
-      </button>
+        {/* En mobile el botón de editar va absoluto en la esquina. */}
+        <div className="sm:hidden absolute top-2 right-3">
+          <EditButton expanded={expanded} onClick={onToggle} />
+        </div>
+      </div>
 
       {expanded && (
         <div className="border-t border-[var(--border-subtle)] px-5 py-4 bg-[var(--surface-2)]">
@@ -300,6 +357,31 @@ function ContainerState({ active }: { active: boolean }) {
     <span className="text-xs text-[var(--primary)]">Activo</span>
   ) : (
     <span className="text-xs text-[var(--muted-foreground)]">Inactivo</span>
+  );
+}
+
+/** Botón de lápiz que abre/cierra el panel de edición del contenedor. */
+function EditButton({
+  expanded,
+  onClick,
+}: {
+  expanded: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={expanded ? "Cerrar edición" : "Editar contenedor"}
+      aria-expanded={expanded}
+      className={`inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors ${
+        expanded
+          ? "bg-[var(--surface-3)] text-[var(--foreground)]"
+          : "text-[var(--muted-foreground)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)]"
+      }`}
+    >
+      <PencilIcon />
+    </button>
   );
 }
 

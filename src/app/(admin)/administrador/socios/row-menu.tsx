@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toggleSocioActivoAction } from "./actions";
 import { SavingSpinner } from "@/components/ui/saving-spinner";
+import { PencilIcon } from "@/components/ui/icons";
 
 export function SocioRowMenu({
   id,
@@ -44,9 +45,9 @@ export function SocioRowMenu({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label="Más opciones"
-        className="btn btn-ghost text-lg px-2 py-1 leading-none"
+        className="inline-flex items-center justify-center h-7 w-7 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] transition-colors"
       >
-        ⋯
+        <PencilIcon />
       </button>
       {open && (
         <div className="absolute right-0 mt-1 z-20 min-w-44 border border-[var(--border)] bg-[var(--card)] shadow-lg">

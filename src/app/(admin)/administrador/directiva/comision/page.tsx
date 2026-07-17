@@ -33,7 +33,7 @@ export default async function ComisionPage() {
   }));
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <div className="space-y-8">
       <PageHeader
         title="Comisión"
         description="Integrantes de la comisión directiva y la sindicatura."

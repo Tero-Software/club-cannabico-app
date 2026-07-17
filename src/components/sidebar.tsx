@@ -82,12 +82,12 @@ export function Sidebar({
         <div className="min-w-0">{brand}</div>
       </div>
 
-      {/* Sidebar desktop: vive sobre el canvas (mismo fondo), sin borde duro.
-          El contraste lo da el panel de contenido flotante, no el sidebar. */}
-      <aside className="hidden lg:flex flex-col w-60 shrink-0 h-screen sticky top-0">
+      {/* Sidebar desktop: misma superficie que el panel de contenido
+          (--surface-2), separados solo por la línea de borde del panel. */}
+      <aside className="hidden lg:flex flex-col w-72 shrink-0 h-screen sticky top-0 bg-[var(--surface-2)]">
         <div className="px-4 pt-5 pb-3 flex items-center shrink-0">{brand}</div>
         {nav}
-        {footer && <div className="px-3 py-2 shrink-0">{footer}</div>}
+        {footer && <div className="shrink-0">{footer}</div>}
       </aside>
 
       {/* Off-canvas mobile */}

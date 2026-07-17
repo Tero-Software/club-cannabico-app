@@ -49,7 +49,7 @@ export function NuevoRetiroHeader({
       </div>
 
       {open && (
-        <div className="border border-[var(--border)] bg-[var(--card)] p-4 mt-4 w-full">
+        <div className="card p-4 mt-4 w-full">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold">Nuevo retiro</h2>
             <button

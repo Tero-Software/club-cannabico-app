@@ -1,13 +1,28 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { GeneticaCard, type Genetica } from "./genetica-card";
 import { updateProductoAction } from "./actions";
 
 export function GeneticasList({ geneticas }: { geneticas: Genetica[] }) {
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  // Permite abrir una genética directo en edición vía ?editar=<id> (p. ej. desde
+  // el botón "Editar" del acopio). Solo se aplica una vez, al montar.
+  const initialEdit = searchParams.get("editar");
+  const [editingId, setEditingId] = useState<string | null>(
+    initialEdit && geneticas.some((g) => g.id === initialEdit) ? initialEdit : null,
+  );
   const formRefs = useRef<Record<string, HTMLFormElement | null>>({});
   const [, startTransition] = useTransition();
+
+  // Al llegar con ?editar=<id>, lleva la card abierta a la vista.
+  useEffect(() => {
+    if (!editingId) return;
+    formRefs.current[editingId]?.scrollIntoView({ block: "center", behavior: "smooth" });
+    // Solo en el primer render con el param inicial.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const request = (id: string) => {
     if (editingId && editingId !== id) {

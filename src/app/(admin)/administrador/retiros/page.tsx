@@ -120,31 +120,32 @@ export default async function AdminRetirosPage({
           No hay retiros para este filtro.
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {retiros.map((r) => {
             const total = r.items.reduce((s, i) => s + i.amount, 0);
             const isDemo = r.user.role === "VISITANTE";
             return (
-            <div key={r.id} className={`card${isDemo ? " border-yellow-400" : ""}`}>
-              <div className="flex items-start justify-between flex-wrap gap-3 mb-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
+            <div key={r.id} className={`card p-0 overflow-hidden${isDemo ? " border-yellow-400" : ""}`}>
+              <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--border)]">
+                {/* Columna 1: datos del socio */}
+                <div className="px-4 py-4 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
                     <span className="font-medium">{r.user.name}</span>
-                    <span className="text-sm text-[var(--muted-foreground)]">
-                      {r.user.email}
-                    </span>
                     {isDemo && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded bg-yellow-400 text-yellow-950">
                         DEMO
                       </span>
                     )}
-                    <span className={estadoBadgeClass(r.status)}>
-                      {estadoLabel(r.status)}
-                    </span>
                   </div>
-                  <div className="text-sm text-[var(--muted-foreground)] mb-1">
-                    {formatDate(r.date)} · {r.timeSlot} · {formatGramos(total)}
+                  <div className="text-sm text-[var(--muted-foreground)] space-y-0.5">
+                    <div>{r.user.email}</div>
+                    <div>{formatDate(r.date)}</div>
+                    <div>{r.timeSlot}</div>
                   </div>
+                </div>
+
+                {/* Columna 2: el pedido */}
+                <div className="px-5 py-4 min-w-0 flex flex-col">
                   <ul className="text-sm space-y-0.5">
                     {r.items.map((it) => (
                       <li key={it.id}>
@@ -157,55 +158,67 @@ export default async function AdminRetirosPage({
                       {r.notes}
                     </div>
                   )}
-                  {r.status !== "PENDING" && !isDemo && (
-                    <div className="flex items-center gap-2 mt-2 text-sm">
-                      <span className={r.paid ? "badge badge-aprobado" : "badge badge-pendiente"}>
-                        {r.paid ? "Pagó" : "No pagó"}
-                      </span>
-                      {r.chargedAmount != null && (
-                        <span className="text-[var(--muted-foreground)]">
-                          {formatMoney(r.chargedAmount.toNumber())}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  <div className="text-sm text-[var(--muted-foreground)] mt-auto pt-2 text-right">
+                    {formatGramos(total)}
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-3">
-                {isDemo ? (
-                  <span className="text-sm text-[var(--muted-foreground)] italic">
-                    Retiro de prueba — no se confirma desde acá.
-                  </span>
-                ) : (
-                  <>
-                    {r.status === "PENDING" && (
+
+                {/* Columna 3: estado y acciones */}
+                <div className="px-5 py-4 flex flex-col gap-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={estadoBadgeClass(r.status)}>
+                      {estadoLabel(r.status)}
+                    </span>
+                    {r.status !== "PENDING" && !isDemo && (
                       <>
-                        <AprobarCobro id={r.id} plans={plans} />
-                        <EstadoButton id={r.id} status="REJECTED" label="Rechazar" variant="destructive" />
+                        <span className={r.paid ? "badge badge-aprobado" : "badge badge-pendiente"}>
+                          {r.paid ? "Pagó" : "No pagó"}
+                        </span>
+                        {r.chargedAmount != null && (
+                          <span className="text-sm text-[var(--muted-foreground)]">
+                            {formatMoney(r.chargedAmount.toNumber())}
+                          </span>
+                        )}
                       </>
                     )}
-                    {r.status === "APPROVED" && (
-                      <>
-                        <EstadoButton id={r.id} status="COMPLETED" label="Marcar completado" variant="primary" />
-                        <AprobarCobro
-                          id={r.id}
-                          plans={plans}
-                          mode="editar"
-                          initialPaid={r.paid}
-                          initialPlanId={r.appliedPlanId ?? ""}
-                        />
-                      </>
-                    )}
-                    {(r.status === "REJECTED" || r.status === "CANCELLED") && (
-                      <EstadoButton id={r.id} status="PENDING" label="Reabrir" variant="secondary" />
-                    )}
-                    {r.status === "COMPLETED" && (
-                      <span className="text-sm text-[var(--muted-foreground)]">
-                        Finalizado
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {isDemo ? (
+                      <span className="text-sm text-[var(--muted-foreground)] italic">
+                        Retiro de prueba — no se confirma desde acá.
                       </span>
+                    ) : (
+                      <>
+                        {r.status === "PENDING" && (
+                          <>
+                            <AprobarCobro id={r.id} plans={plans} />
+                            <EstadoButton id={r.id} status="REJECTED" label="Rechazar" variant="destructive" />
+                          </>
+                        )}
+                        {r.status === "APPROVED" && (
+                          <>
+                            <EstadoButton id={r.id} status="COMPLETED" label="Marcar completado" variant="primary" />
+                            <AprobarCobro
+                              id={r.id}
+                              plans={plans}
+                              mode="editar"
+                              initialPaid={r.paid}
+                              initialPlanId={r.appliedPlanId ?? ""}
+                            />
+                          </>
+                        )}
+                        {(r.status === "REJECTED" || r.status === "CANCELLED") && (
+                          <EstadoButton id={r.id} status="PENDING" label="Reabrir" variant="secondary" />
+                        )}
+                        {r.status === "COMPLETED" && (
+                          <span className="text-sm text-[var(--muted-foreground)]">
+                            Finalizado
+                          </span>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
+                  </div>
+                </div>
               </div>
             </div>
             );

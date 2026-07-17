@@ -8,12 +8,27 @@ import { SociosTable } from "./socios-table";
 
 export const metadata = { title: "Socios (administrador)" };
 
-type SortKey = "ultimo" | "login";
+type SortKey = "default" | "login";
 
 const SORTS: { label: string; value: SortKey }[] = [
-  { label: "Último retiro", value: "ultimo" },
+  { label: "Por defecto", value: "default" },
   { label: "Último login", value: "login" },
 ];
+
+// Orden jerárquico de la directiva (mismo que CARGOS). Índice = prioridad; los
+// que no tienen cargo van después.
+const CARGO_ORDER: Record<string, number> = {
+  PRESIDENTE: 0,
+  SECRETARIO: 1,
+  TESORERO: 2,
+  SUPLENTE_1: 3,
+  SUPLENTE_2: 4,
+  SUPLENTE_3: 5,
+  SINDICO: 6,
+  SINDICO_SUPLENTE: 7,
+};
+const cargoRank = (cargo: string | null) =>
+  cargo && cargo in CARGO_ORDER ? CARGO_ORDER[cargo] : Number.MAX_SAFE_INTEGER;
 
 export default async function AdminSociosPage({
   searchParams,
@@ -25,7 +40,7 @@ export default async function AdminSociosPage({
 
   const { orden } = await searchParams;
   const sort: SortKey =
-    SORTS.find((s) => s.value === orden)?.value ?? "ultimo";
+    SORTS.find((s) => s.value === orden)?.value ?? "default";
 
   const tenantId = session!.user.tenantId;
   const pendingPostulaciones = can(session, "postulaciones:manage")
@@ -40,6 +55,7 @@ export default async function AdminSociosPage({
       email: true,
       phone: true,
       role: true,
+      cargo: true,
       active: true,
       createdAt: true,
       lastLoginAt: true,
@@ -59,15 +75,22 @@ export default async function AdminSociosPage({
   }));
 
   enriched.sort((a, b) => {
+    // Activos arriba, inactivos abajo. Dentro de cada grupo, el mismo criterio.
     if (a.active !== b.active) return a.active ? -1 : 1;
     if (sort === "login") {
       const al = a.lastLoginAt?.getTime() ?? 0;
       const bl = b.lastLoginAt?.getTime() ?? 0;
       return bl - al;
     }
-    const at = a.ultimoRetiro?.getTime() ?? 0;
-    const bt = b.ultimoRetiro?.getTime() ?? 0;
-    return bt - at;
+    // Por defecto: la directiva arriba (por jerarquía de cargo); el resto por
+    // fecha de inscripción y, dentro de la misma fecha, alfabético.
+    const ra = cargoRank(a.cargo);
+    const rb = cargoRank(b.cargo);
+    if (ra !== rb) return ra - rb;
+    const ca = a.createdAt.getTime();
+    const cb = b.createdAt.getTime();
+    if (ca !== cb) return ca - cb;
+    return a.name.localeCompare(b.name);
   });
 
   const activosCount = enriched.filter(
@@ -80,9 +103,8 @@ export default async function AdminSociosPage({
     email: s.email,
     phone: s.phone,
     role: s.role,
+    cargo: s.cargo,
     active: s.active,
-    retiros: s._count.withdrawals,
-    ultimoRetiro: s.ultimoRetiro ? s.ultimoRetiro.toISOString() : null,
   }));
 
   return (
@@ -98,7 +120,7 @@ export default async function AdminSociosPage({
           <Link
             key={s.value}
             href={
-              s.value === "ultimo"
+              s.value === "default"
                 ? "/administrador/socios"
                 : `/administrador/socios?orden=${s.value}`
             }

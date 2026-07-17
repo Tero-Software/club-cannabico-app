@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
-import { formatGramos } from "@/lib/format";
 import { ContainersPanel } from "./containers-panel";
+import { AcopioStats } from "./acopio-stats";
 import type { Container } from "./containers-list";
 
 export const metadata = { title: "Acopio (administrador)" };
@@ -37,7 +37,7 @@ export default async function ContainersPage() {
     prisma.strain.findMany({
       where: { tenantId },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, photos: true, description: true },
     }),
   ]);
 
@@ -77,8 +77,6 @@ export default async function ContainersPage() {
       totalCurrent += item.currentWeight;
     }
   }
-  const totalConsumed = totalInitial - totalCurrent;
-  const consumedPct = totalInitial > 0 ? (totalConsumed / totalInitial) * 100 : 0;
   // Genéticas distintas disponibles (por strainId): las que tienen al menos un
   // item activo. Una genética repartida en varios contenedores cuenta una vez.
   const strainsActivas = new Set<string>();
@@ -89,36 +87,72 @@ export default async function ContainersPage() {
   }
   const activeCount = strainsActivas.size;
 
+  // Detalle por cosecha: stock disponible (currentWeight) y retirado
+  // (initialWeight - currentWeight) de cada cosecha con producto en existencia.
+  // Se agrupa por harvestId; los sueltos (sin cosecha) van bajo la clave "".
+  const porCosecha = new Map<
+    string,
+    { harvestDate: string | null; stock: number; retirado: number }
+  >();
+  for (const c of containers) {
+    const key = c.harvestId ?? "";
+    const acc =
+      porCosecha.get(key) ??
+      { harvestDate: c.harvestDate, stock: 0, retirado: 0 };
+    for (const item of c.items) {
+      acc.stock += item.currentWeight;
+      acc.retirado += item.initialWeight - item.currentWeight;
+    }
+    porCosecha.set(key, acc);
+  }
+  const cosechaStock = [...porCosecha.entries()]
+    .map(([id, v]) => ({ id, ...v }))
+    .filter((v) => v.stock > 0)
+    .sort((a, b) => (b.harvestDate ?? "").localeCompare(a.harvestDate ?? ""));
+  const cosechaRetiro = [...porCosecha.entries()]
+    .map(([id, v]) => ({ id, ...v }))
+    .filter((v) => v.retirado > 0)
+    .sort((a, b) => (b.harvestDate ?? "").localeCompare(a.harvestDate ?? ""));
+
+  // Detalle por genética: lo disponible (currentWeight) de cada una con foto.
+  const porGenetica = new Map<
+    string,
+    { name: string; photo: string | null; description: string | null; disponible: number }
+  >();
+  for (const s of strains) {
+    porGenetica.set(s.id, {
+      name: s.name,
+      photo: s.photos[0] ?? null,
+      description: s.description,
+      disponible: 0,
+    });
+  }
+  for (const c of containers) {
+    for (const item of c.items) {
+      if (!item.strainId) continue;
+      const acc = porGenetica.get(item.strainId);
+      if (acc) acc.disponible += item.currentWeight;
+    }
+  }
+  const geneticaStock = [...porGenetica.entries()]
+    .map(([id, v]) => ({ id, ...v }))
+    .filter((v) => v.disponible > 0)
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <div className="space-y-8">
       <ContainersPanel
         containers={containers}
         strains={strains}
         stats={
-          <>
-            <div className="card p-0 overflow-hidden">
-              <StatRow label="Genéticas disponibles" value={`${activeCount}`} />
-              <StatRow label="Stock total" value={formatGramos(totalCurrent)} />
-            </div>
-            <div className="card p-0 overflow-hidden">
-              <StatRow label="Cosecha actual" value={formatGramos(totalInitial)} />
-              <StatRow
-                label="Retirado"
-                value={`${formatGramos(totalConsumed)} (${consumedPct.toFixed(1)}%)`}
-              />
-            </div>
-          </>
+          <AcopioStats
+            stockTotal={totalCurrent}
+            geneticasCount={activeCount}
+            cosechaStock={cosechaStock}
+            geneticaStock={geneticaStock}
+          />
         }
       />
-    </div>
-  );
-}
-
-function StatRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-5 py-3 border-t border-[var(--border-subtle)] first-of-type:border-t-0">
-      <span className="text-sm text-[var(--muted-foreground)]">{label}</span>
-      <span className="text-lg font-semibold">{value}</span>
     </div>
   );
 }

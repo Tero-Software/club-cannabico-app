@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { DatosEditor } from "./datos-editor";
 import { ToggleActivoSection } from "./toggle-activo";
 import { PlanSelector } from "./plan-selector";
+import { DataTable, type Column } from "@/components/ui/data-table";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -139,72 +140,55 @@ export default async function SocioDetailPage({
         {loginLogs.length === 0 ? (
           <p className="text-sm text-[var(--muted-foreground)]">Sin registros.</p>
         ) : (
-          <div className="card p-0 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--muted)] text-left">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Fecha</th>
-                    <th className="px-4 py-3 font-medium">Acción</th>
-                    <th className="px-4 py-3 font-medium">IP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loginLogs.map((l) => (
-                    <tr key={l.id} className="border-t border-[var(--border)]">
-                      <td className="px-4 py-2.5 text-[var(--muted-foreground)] whitespace-nowrap">
-                        {fmt.format(l.createdAt)}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <ActionBadge action={l.action} />
-                      </td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">
-                        {l.ip || "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <DataTable
+            rows={loginLogs}
+            getRowKey={(l) => l.id}
+            columns={
+              [
+                {
+                  label: "Fecha",
+                  muted: true,
+                  cellClassName: "whitespace-nowrap",
+                  cell: (l) => fmt.format(l.createdAt),
+                },
+                { label: "Acción", cell: (l) => <ActionBadge action={l.action} /> },
+                {
+                  label: "IP",
+                  muted: true,
+                  cellClassName: "font-mono text-xs",
+                  cell: (l) => l.ip || "—",
+                },
+              ] as Column<(typeof loginLogs)[number]>[]
+            }
+          />
         )}
       </section>
 
       {otherLogs.length > 0 && (
         <section>
           <h2 className="text-xl font-semibold mb-4">Otra actividad</h2>
-          <div className="card p-0 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-[var(--muted)] text-left">
-                  <tr>
-                    <th className="px-4 py-3 font-medium">Fecha</th>
-                    <th className="px-4 py-3 font-medium">Acción</th>
-                    <th className="px-4 py-3 font-medium">Entidad</th>
-                    <th className="px-4 py-3 font-medium">IP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {otherLogs.map((l) => (
-                    <tr key={l.id} className="border-t border-[var(--border)]">
-                      <td className="px-4 py-2.5 text-[var(--muted-foreground)] whitespace-nowrap">
-                        {fmt.format(l.createdAt)}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <ActionBadge action={l.action} />
-                      </td>
-                      <td className="px-4 py-2.5 text-[var(--muted-foreground)]">
-                        {l.entity ?? "—"}
-                      </td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-[var(--muted-foreground)]">
-                        {l.ip || "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <DataTable
+            rows={otherLogs}
+            getRowKey={(l) => l.id}
+            columns={
+              [
+                {
+                  label: "Fecha",
+                  muted: true,
+                  cellClassName: "whitespace-nowrap",
+                  cell: (l) => fmt.format(l.createdAt),
+                },
+                { label: "Acción", cell: (l) => <ActionBadge action={l.action} /> },
+                { label: "Entidad", muted: true, cell: (l) => l.entity ?? "—" },
+                {
+                  label: "IP",
+                  muted: true,
+                  cellClassName: "font-mono text-xs",
+                  cell: (l) => l.ip || "—",
+                },
+              ] as Column<(typeof otherLogs)[number]>[]
+            }
+          />
         </section>
       )}
 

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { assignCargo } from "./actions";
+import { PencilIcon } from "@/components/ui/icons";
 
 type Socio = { id: string; name: string };
 type Row = { cargo: string; label: string; socio: Socio | null };
@@ -67,11 +68,11 @@ function CargoRow({ row, socios }: { row: Row; socios: Socio[] }) {
   }
 
   return (
-    <div className="group flex items-center justify-between gap-3 px-5 py-3">
+    <div className="flex items-center justify-between gap-4 px-5 py-3">
       <span className="text-sm font-medium shrink-0">{row.label}</span>
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-10 min-w-0">
         <span
-          className={`text-sm truncate ${
+          className={`text-sm ${
             row.socio ? "" : "text-[var(--muted-foreground)] italic"
           }`}
         >
@@ -80,7 +81,7 @@ function CargoRow({ row, socios }: { row: Row; socios: Socio[] }) {
         <button
           type="button"
           aria-label={`Editar ${row.label}`}
-          className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity shrink-0"
+          className="inline-flex items-center justify-center h-7 w-7 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] transition-colors shrink-0"
           onClick={() => setEditing(true)}
         >
           <PencilIcon />
@@ -90,21 +91,3 @@ function CargoRow({ row, socios }: { row: Row; socios: Socio[] }) {
   );
 }
 
-function PencilIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" />
-    </svg>
-  );
-}

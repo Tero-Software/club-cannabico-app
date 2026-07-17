@@ -5,6 +5,7 @@ import { auth, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Sidebar, type SidebarSection, type SidebarItem } from "@/components/sidebar";
+import { AccountMenu, type AccountMenuItem } from "@/components/account-menu";
 import { can } from "@/lib/permissions";
 
 type GatedItem = SidebarItem & { show: boolean };
@@ -27,9 +28,7 @@ export default async function AdminLayout({
     if (fresh?.mustChangePassword) redirect("/cambiar-password");
   }
 
-  const username = session.user.email?.split("@")[0] ?? "admin";
-
-  const [pendingRetiros, pendingPostulaciones, viewer] =
+  const [pendingRetiros, pendingPostulaciones, viewer, tenant] =
     await Promise.all([
       can(session, "retiros:manage")
         ? prisma.withdrawal.count({ where: { status: "PENDING" } })
@@ -41,8 +40,15 @@ export default async function AdminLayout({
         where: { id: session.user.id },
         select: { isOwner: true },
       }),
+      prisma.tenant.findUnique({
+        where: { id: session.user.tenantId },
+        select: { name: true },
+      }),
     ]);
   const isOwner = !!viewer?.isOwner;
+  // Arriba del sidebar va el nombre del club (la "app"), como Claude muestra el
+  // nombre de la aplicación. El logo se conserva.
+  const appName = tenant?.name ?? "Club";
 
   const sections: SidebarSection[] = [
     {
@@ -128,30 +134,40 @@ export default async function AdminLayout({
         },
       ]),
     },
-    {
-      title: "Ajustes",
-      items: visible([
-        {
-          href: "/administrador/administradores",
-          label: "Administradores",
-          icon: <AdminsIcon />,
-          show: can(session, "admins:manage"),
-        },
-        {
-          href: "/administrador/seguridad",
-          label: "Seguridad",
-          icon: <SeguridadIcon />,
-          show: true,
-        },
-        {
-          href: "/administrador/configuracion",
-          label: "Configuración",
-          icon: <ConfigIcon />,
-          show: true,
-        },
-      ]),
-    },
   ];
+
+  // Opciones de "Ajustes": ahora viven dentro del menú de cuenta (pie del
+  // sidebar), no como sección de navegación. Incluye "Editar genéticas".
+  const accountItems: AccountMenuItem[] = (
+    [
+      {
+        href: "/administrador/geneticas",
+        label: "Editar genéticas",
+        icon: <GeneticasIcon />,
+        show: can(session, "geneticas:manage"),
+      },
+      {
+        href: "/administrador/administradores",
+        label: "Administradores",
+        icon: <AdminsIcon />,
+        show: can(session, "admins:manage"),
+      },
+      {
+        href: "/administrador/seguridad",
+        label: "Seguridad",
+        icon: <SeguridadIcon />,
+        show: true,
+      },
+      {
+        href: "/administrador/configuracion",
+        label: "Configuración",
+        icon: <ConfigIcon />,
+        show: true,
+      },
+    ] as (AccountMenuItem & { show: boolean })[]
+  )
+    .filter((i) => i.show)
+    .map(({ show: _show, ...item }) => item);
 
   const brand = (
     <div className="flex items-center gap-2 min-w-0 w-full">
@@ -161,73 +177,57 @@ export default async function AdminLayout({
       >
         <Image
           src="/logo.png"
-          alt={username}
-          width={20}
-          height={20}
+          alt={appName}
+          width={22}
+          height={22}
           className="rounded-full object-cover shrink-0"
           priority
         />
-        <span className="text-sm font-medium text-[var(--foreground)] truncate">
-          {username}
+        <span className="text-sm font-semibold text-[var(--foreground)] truncate">
+          {appName}
         </span>
       </Link>
-      {isOwner && (
-        <span className="ml-auto shrink-0">
-          <CrownIcon />
-        </span>
-      )}
     </div>
   );
 
-  const footer = (
-    <div className="flex items-center justify-between gap-1">
-      <ThemeToggle />
-      <form
-        action={async () => {
-          "use server";
-          await signOut({ redirectTo: "/" });
-        }}
-        className="flex-1"
+  const signOutButton = (
+    <form
+      action={async () => {
+        "use server";
+        await signOut({ redirectTo: "/" });
+      }}
+    >
+      <button
+        type="submit"
+        role="menuitem"
+        className="w-full flex items-center gap-2.5 h-8 px-3 text-sm text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-colors"
       >
-        <button
-          type="submit"
-          className="w-full flex items-center justify-between px-2 h-8 rounded-md text-sm text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-colors"
-        >
-          <span>Salir</span>
-          <LogoutIcon />
-        </button>
-      </form>
-    </div>
+        <LogoutIcon />
+        <span>Salir</span>
+      </button>
+    </form>
+  );
+
+  const footer = (
+    <AccountMenu
+      name={session.user.name}
+      isOwner={isOwner}
+      items={accountItems}
+      themeToggle={<ThemeToggle />}
+      onSignOut={signOutButton}
+    />
   );
 
   return (
     <div className="app-shell min-h-screen lg:h-screen lg:overflow-hidden bg-[var(--background)] flex flex-col lg:flex-row">
       <Sidebar brand={brand} sections={sections} footer={footer} />
-      {/* Panel de contenido flotante: superficie más clara que el canvas,
-          redondeada, separada del borde por un gutter (modelo Linear).
+      {/* Panel de contenido a pantalla completa: superficie más clara que el
+          canvas, separada del sidebar solo por una línea (sin gutter ni bezel).
           En desktop el shell queda fijo al viewport y el scroll vive acá. */}
-      <main className="flex-1 min-w-0 lg:my-2 lg:mr-1 bg-[var(--surface-2)] lg:rounded-xl lg:border lg:border-[var(--border-subtle)] overflow-hidden lg:overflow-y-auto">
+      <main className="flex-1 min-w-0 bg-[var(--surface-2)] lg:border-l lg:border-[var(--border-subtle)] overflow-hidden lg:overflow-y-auto lg:[scrollbar-gutter:stable_both-edges]">
         <div className="px-4 sm:px-6 lg:px-10 py-8">{children}</div>
       </main>
     </div>
-  );
-}
-
-function CrownIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="var(--accent-yellow)"
-      stroke="var(--accent-yellow)"
-      strokeWidth="1.2"
-      strokeLinejoin="round"
-      strokeLinecap="round"
-      aria-label="owner"
-    >
-      <path d="M6 18h12l1-7-4 2.5L12 8l-3 5.5L5 11z" />
-    </svg>
   );
 }
 
@@ -356,6 +356,17 @@ function AdminsIcon() {
     <svg {...iconProps}>
       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
       <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function GeneticasIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M12 22c0-6 4-10 8-10-1 5-4 9-8 10z" />
+      <path d="M12 22c0-6-4-10-8-10 1 5 4 9 8 10z" />
+      <path d="M12 22V8" />
+      <path d="M12 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" />
     </svg>
   );
 }
