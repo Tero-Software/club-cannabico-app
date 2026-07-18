@@ -78,11 +78,12 @@ export default async function ContainersPage() {
     }
   }
   // Genéticas distintas disponibles (por strainId): las que tienen al menos un
-  // item activo. Una genética repartida en varios contenedores cuenta una vez.
+  // item con existencia (currentWeight > 0), activo o no. Una genética repartida
+  // en varios contenedores cuenta una vez.
   const strainsActivas = new Set<string>();
   for (const c of containers) {
     for (const item of c.items) {
-      if (item.strainId && item.active) strainsActivas.add(item.strainId);
+      if (item.strainId && item.currentWeight > 0) strainsActivas.add(item.strainId);
     }
   }
   const activeCount = strainsActivas.size;
