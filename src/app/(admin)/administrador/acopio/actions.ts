@@ -64,6 +64,21 @@ export async function createContainerAction(formData: FormData) {
     }
   }
 
+  // Nada se comparte entre clubes: cada genética referenciada por un item debe
+  // pertenecer al club. Se validan todas en una sola consulta.
+  const strainIds = [
+    ...new Set(items.map((it) => it.strainId).filter((s): s is string => !!s)),
+  ];
+  if (strainIds.length) {
+    const owned = await prisma.strain.findMany({
+      where: { id: { in: strainIds }, tenantId },
+      select: { id: true },
+    });
+    if (owned.length !== strainIds.length) {
+      return { error: "Alguna genética no pertenece al club" };
+    }
+  }
+
   const container = await prisma.container.create({
     data: {
       tenantId,
@@ -180,6 +195,15 @@ export async function addContainerItemAction(formData: FormData) {
     select: { id: true },
   });
   if (!container) return { error: "Contenedor no encontrado" };
+
+  // Nada se comparte entre clubes: la genética debe pertenecer al club.
+  if (strainId) {
+    const strain = await prisma.strain.findFirst({
+      where: { id: strainId, tenantId },
+      select: { id: true },
+    });
+    if (!strain) return { error: "La genética no pertenece al club" };
+  }
 
   const item = await prisma.containerItem.create({
     data: {

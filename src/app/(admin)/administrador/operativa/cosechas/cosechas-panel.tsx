@@ -2,9 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { NewContainerForm } from "../../acopio/new-container-form";
-import { SubmitWithSpinner } from "@/components/ui/submit-with-spinner";
 import { ConfirmButton } from "@/components/ui/confirm-button";
-import { createHarvest, declareHarvest, deleteHarvest } from "./actions";
+import { declareHarvest, deleteHarvest } from "./actions";
 
 type Strain = { id: string; name: string };
 type ItemRow = { strainName: string; plantNumber: string | null; weight: number };
@@ -28,8 +27,6 @@ export function CosechasPanel({
 
   return (
     <div className="space-y-8">
-      <NewHarvest />
-
       {staging.length > 0 && (
         <div className="space-y-4">
           {staging.map((h) => (
@@ -38,61 +35,6 @@ export function CosechasPanel({
         </div>
       )}
     </div>
-  );
-}
-
-function NewHarvest() {
-  const [open, setOpen] = useState(false);
-  const [pending, start] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  if (!open) {
-    return (
-      <button className="btn btn-primary text-sm" onClick={() => setOpen(true)}>
-        Nueva cosecha
-      </button>
-    );
-  }
-
-  return (
-    <form
-      action={(fd) =>
-        start(async () => {
-          setError(null);
-          const res = await createHarvest(fd);
-          if (res?.error) setError(res.error);
-          else setOpen(false);
-        })
-      }
-      className="card flex items-end gap-3 flex-wrap"
-    >
-      <div>
-        <label className="label">Fecha</label>
-        <input type="date" name="date" className="input" autoFocus />
-      </div>
-      <div className="flex-1 min-w-[12rem]">
-        <label className="label">Notas</label>
-        <input
-          type="text"
-          name="notes"
-          className="input w-full"
-          placeholder="Opcional"
-        />
-      </div>
-      <SubmitWithSpinner className="btn btn-primary text-sm">
-        Crear
-      </SubmitWithSpinner>
-      <button
-        type="button"
-        className="btn btn-ghost text-sm"
-        onClick={() => setOpen(false)}
-      >
-        Cancelar
-      </button>
-      {error && (
-        <p className="text-sm text-[var(--destructive)] w-full">{error}</p>
-      )}
-    </form>
   );
 }
 

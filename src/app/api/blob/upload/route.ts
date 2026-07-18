@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
+import { geneticasBlobPath } from "@/lib/blob";
 
 const MAX_SIZE = 8 * 1024 * 1024;
 const ALLOWED = ["image/png", "image/jpeg", "image/webp", "image/gif"];
@@ -26,7 +27,10 @@ export async function POST(req: Request) {
 
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
   const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const blob = await put(`geneticas/${safeName}`, file, {
+  // Nada se comparte entre clubes: el blob se guarda bajo el prefijo del club,
+  // de modo que solo su propio club pueda borrarlo (ver isOwnTenantBlob).
+  const path = geneticasBlobPath(session!.user.tenantSlug, safeName);
+  const blob = await put(path, file, {
     access: "public",
     addRandomSuffix: false,
   });

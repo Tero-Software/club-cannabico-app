@@ -8,6 +8,7 @@ export type ClubConfig = {
   minGramosRetiro: number;
   minGramosPorVariedad: number;
   multiploGramos: number;
+  cobroExcedente: "PROPORCIONAL" | "FRANJA_MAS_EXCEDENTE";
   maxSocios: number;
 };
 
@@ -32,6 +33,7 @@ export function getClubConfig(tenantId: string): Promise<ClubConfig> {
         minGramosRetiro: t.minGramsPerWithdrawal,
         minGramosPorVariedad: t.minGramsPerStrain,
         multiploGramos: t.gramsStep,
+        cobroExcedente: t.cobroExcedente,
         maxSocios: t.maxActiveMembers,
       };
     },

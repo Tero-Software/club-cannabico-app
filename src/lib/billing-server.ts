@@ -27,7 +27,6 @@ export async function resolvePlanForMember(
   return {
     id: plan.id,
     name: plan.name,
-    monthlyPrice: plan.monthlyPrice.toNumber(),
     tiers: plan.tiers.map((t) => ({ fromGrams: t.fromGrams, price: t.price.toNumber() })),
   };
 }

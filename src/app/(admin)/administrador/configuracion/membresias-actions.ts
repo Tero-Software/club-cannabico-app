@@ -22,11 +22,6 @@ const tierSchema = z.object({
 const planSchema = z
   .object({
     name: z.string().trim().min(1, "Nombre requerido").max(120),
-    monthlyPrice: z
-      .number()
-      .nonnegative()
-      .max(1000000000)
-      .multipleOf(0.01, "Hasta dos decimales"),
     tiers: z.array(tierSchema),
   })
   .superRefine((data, ctx) => {
@@ -53,13 +48,8 @@ function parsePayload(fd: FormData) {
       /* ignore: validado abajo */
     }
   }
-  const monthlyRaw = fd.get("monthlyPrice");
-  const monthlyPrice =
-    typeof monthlyRaw === "string" && monthlyRaw.trim() !== "" ? Number(monthlyRaw) : NaN;
-
   return planSchema.safeParse({
     name: String(fd.get("name") ?? ""),
-    monthlyPrice,
     tiers,
   });
 }
@@ -89,7 +79,6 @@ export async function createPlanAction(_prev: PlanState, fd: FormData): Promise<
     data: {
       tenantId,
       name: data.name,
-      monthlyPrice: data.monthlyPrice,
       tiers: {
         create: data.tiers.map((t) => ({ tenantId, fromGrams: t.fromGrams, price: t.price })),
       },
@@ -102,7 +91,7 @@ export async function createPlanAction(_prev: PlanState, fd: FormData): Promise<
     action: "membership.plan.create",
     entity: "MembershipPlan",
     entityId: plan.id,
-    metadata: { name: data.name, monthlyPrice: data.monthlyPrice, tiers: data.tiers.length },
+    metadata: { name: data.name, tiers: data.tiers.length },
   });
 
   revalidatePath("/administrador/configuracion");
@@ -132,7 +121,6 @@ export async function updatePlanAction(_prev: PlanState, fd: FormData): Promise<
       where: { id },
       data: {
         name: data.name,
-        monthlyPrice: data.monthlyPrice,
         tiers: {
           create: data.tiers.map((t) => ({ tenantId, fromGrams: t.fromGrams, price: t.price })),
         },
@@ -146,7 +134,7 @@ export async function updatePlanAction(_prev: PlanState, fd: FormData): Promise<
     action: "membership.plan.update",
     entity: "MembershipPlan",
     entityId: id,
-    metadata: { name: data.name, monthlyPrice: data.monthlyPrice, tiers: data.tiers.length },
+    metadata: { name: data.name, tiers: data.tiers.length },
   });
 
   revalidatePath("/administrador/configuracion");

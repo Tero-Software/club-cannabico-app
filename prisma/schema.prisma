@@ -80,6 +80,17 @@ enum FinanceKind {
   @@map("TipoMovimiento")
 }
 
+// Cómo cobra el club un pedido cuya cantidad cae entre dos franjas por gramos.
+// PROPORCIONAL: todo el pedido al precio por gramo de la franja alcanzada.
+// FRANJA_MAS_EXCEDENTE: la franja alcanzada a precio fijo, y los gramos que
+// sobran al precio por gramo de la franja base (la primera).
+enum CobroExcedente {
+  PROPORCIONAL
+  FRANJA_MAS_EXCEDENTE
+
+  @@map("CobroExcedente")
+}
+
 model Tenant {
   id                    String   @id @default(cuid())
   slug                  String   @unique
@@ -97,6 +108,9 @@ model Tenant {
   minGramsPerWithdrawal Int      @default(20)
   minGramsPerStrain     Int      @default(10)
   gramsStep             Int      @default(10)
+  // Cómo se cobra un pedido cuya cantidad supera una franja pero no llega a la
+  // siguiente. Ver enum CobroExcedente.
+  cobroExcedente        CobroExcedente @default(PROPORCIONAL)
   maxActiveMembers      Int      @default(45)
   // Cadencia de juntas de directiva: cada cuántos días se espera una junta.
   // 1 mensual ≈ 30 días. Base para avisar juntas pendientes en el inicio.
@@ -467,9 +481,9 @@ model MembershipPlan {
   tenantId     String
   tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name         String           @map("nombre")
-  // Cuota mensual completa. Se cobra cuando el retiro alcanza el cupo máximo
-  // mensual del club. Por debajo, se cobra por franja.
-  monthlyPrice Decimal          @map("cuotaMensual") @db.Decimal(12, 2)
+  // Obsoleto: el cobro sale solo de las franjas por gramos. La columna queda con
+  // default 0 hasta la base limpia del 0.1, donde se elimina.
+  monthlyPrice Decimal          @default(0) @map("cuotaMensual") @db.Decimal(12, 2)
   // Si es el plan por defecto del club. Único por tenant (índice parcial en SQL).
   isDefault    Boolean          @default(false) @map("porDefecto")
   active       Boolean          @default(true) @map("activo")
@@ -550,6 +564,9 @@ model Plant {
   // Rendimiento en gramos. Null mientras no se cosechó.
   yield        Float?    @map("rendimiento")
   notes        String?   @map("observaciones")
+  // Planta que no prosperó (murió antes de completar el ciclo). Sirve para
+  // separarlas del ruedo en la vista y en el orden.
+  notProspered Boolean   @default(false) @map("noProspero")
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

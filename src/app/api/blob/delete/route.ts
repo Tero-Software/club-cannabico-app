@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { del } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
-
-const BLOB_HOST_SUFFIX = ".public.blob.vercel-storage.com";
+import { isOwnTenantBlob } from "@/lib/blob";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -16,13 +15,10 @@ export async function POST(req: Request) {
   if (!url) {
     return NextResponse.json({ error: "no url" }, { status: 400 });
   }
-  try {
-    const host = new URL(url).hostname;
-    if (!host.endsWith(BLOB_HOST_SUFFIX)) {
-      return NextResponse.json({ error: "invalid host" }, { status: 400 });
-    }
-  } catch {
-    return NextResponse.json({ error: "invalid url" }, { status: 400 });
+  // Nada se comparte entre clubes: solo se puede borrar un blob que esté bajo el
+  // prefijo del propio club. Esto valida host de Vercel Blob y namespace del tenant.
+  if (!isOwnTenantBlob(url, session!.user.tenantSlug)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
   try {

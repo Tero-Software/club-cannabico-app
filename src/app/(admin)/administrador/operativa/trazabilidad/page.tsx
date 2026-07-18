@@ -13,64 +13,63 @@ export default async function TrazabilidadPage() {
 
   const tenantId = session!.user.tenantId;
 
-  const [plantsRaw, strains, harvests] = await Promise.all([
-    prisma.plant.findMany({
+  const [harvestsRaw, strains] = await Promise.all([
+    prisma.harvest.findMany({
       where: { tenantId },
-      orderBy: { number: "asc" },
-      include: { strain: { select: { name: true } } },
+      orderBy: { date: "desc" },
+      select: {
+        id: true,
+        date: true,
+        declarada: true,
+        plants: {
+          // Las que no prosperaron van al final; dentro de cada grupo, por número.
+          orderBy: [{ notProspered: "asc" }, { number: "asc" }],
+          include: { strain: { select: { name: true } } },
+        },
+      },
     }),
     prisma.strain.findMany({
       where: { tenantId },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
-    prisma.harvest.findMany({
-      where: { tenantId },
-      orderBy: { date: "desc" },
-      select: { id: true, date: true },
-    }),
   ]);
 
-  const plants = plantsRaw.map((p) => ({
-    id: p.id,
-    number: p.number,
-    strainId: p.strainId,
-    strainName: p.strain?.name ?? null,
-    harvestId: p.harvestId,
-    germinatedAt: p.germinatedAt?.toISOString() ?? null,
-    pottedAt: p.pottedAt?.toISOString() ?? null,
-    bedAt: p.bedAt?.toISOString() ?? null,
-    floweredAt: p.floweredAt?.toISOString() ?? null,
-    harvestedAt: p.harvestedAt?.toISOString() ?? null,
-    yield: p.yield,
-    notes: p.notes,
-  }));
-
-  const harvestOptions = harvests.map((h) => ({
+  const harvests = harvestsRaw.map((h) => ({
     id: h.id,
-    label: new Intl.DateTimeFormat("es-UY", { dateStyle: "medium" }).format(
-      h.date,
-    ),
+    date: h.date.toISOString(),
+    declarada: h.declarada,
+    plants: h.plants.map((p) => ({
+      id: p.id,
+      number: p.number,
+      strainId: p.strainId,
+      strainName: p.strain?.name ?? null,
+      harvestId: p.harvestId,
+      germinatedAt: p.germinatedAt?.toISOString() ?? null,
+      pottedAt: p.pottedAt?.toISOString() ?? null,
+      bedAt: p.bedAt?.toISOString() ?? null,
+      floweredAt: p.floweredAt?.toISOString() ?? null,
+      harvestedAt: p.harvestedAt?.toISOString() ?? null,
+      yield: p.yield,
+      notes: p.notes,
+      notProspered: p.notProspered,
+    })),
   }));
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Trazabilidad"
-        description="Registro de trazabilidad del IRCCA: una ficha por planta con las fechas de cada etapa del ciclo, el rendimiento y las observaciones."
+        description="Registro de trazabilidad del IRCCA: cada cosecha agrupa sus plantas, con las fechas de cada etapa del ciclo, el rendimiento y las observaciones."
       />
 
-      <TrazabilidadPanel
-        plants={plants}
-        strains={strains}
-        harvests={harvestOptions}
-      />
+      <TrazabilidadPanel harvests={harvests} strains={strains} />
 
-      {plants.length === 0 && (
+      {harvests.length === 0 && (
         <EmptyState
           icon={<TrazabilidadIcon />}
-          title="Todavía no hay plantas cargadas"
-          description="Cargá una planta para empezar a registrar su recorrido, desde la germinación hasta la cosecha."
+          title="Todavía no hay cosechas"
+          description="Creá una cosecha con su fecha de inicio para empezar a cargar las plantas de su ciclo."
         />
       )}
     </div>

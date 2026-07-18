@@ -31,6 +31,7 @@ export default async function SanitariaPage() {
     id: t.id,
     date: t.date.toISOString(),
     description: t.description,
+    plantId: t.appliesToAll ? null : t.plantId,
     target:
       t.appliesToAll || !t.plantId
         ? "todas"

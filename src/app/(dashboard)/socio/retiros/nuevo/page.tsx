@@ -91,6 +91,9 @@ export default async function NuevoRetiroPage() {
         horarios={config.horarios}
         gramosDisponibles={gramosDisponibles}
         maxGramos={config.maxGramosMes}
+        step={config.multiploGramos}
+        minRetiro={config.minGramosRetiro}
+        minPorVariedad={config.minGramosPorVariedad}
       />
     </div>
   );

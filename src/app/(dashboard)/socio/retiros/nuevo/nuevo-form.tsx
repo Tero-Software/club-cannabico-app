@@ -18,9 +18,6 @@ type Genetica = {
 
 type Seleccion = Record<string, number>;
 
-const STEP = 10;
-const MIN_RETIRO = 20;
-
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 const MESES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -40,11 +37,17 @@ export function NuevoRetiroForm({
   horarios,
   gramosDisponibles,
   maxGramos,
+  step,
+  minRetiro,
+  minPorVariedad,
 }: {
   geneticas: Genetica[];
   horarios: string[];
   gramosDisponibles: number;
   maxGramos: number;
+  step: number;
+  minRetiro: number;
+  minPorVariedad: number;
 }) {
   const [state, action, pending] = useActionState<RetiroFormState, FormData>(
     crearRetiroAction,
@@ -59,7 +62,7 @@ export function NuevoRetiroForm({
     [seleccion],
   );
   const restante = Math.max(0, gramosDisponibles - total);
-  const puedeSumar = restante >= STEP;
+  const puedeSumar = restante >= step;
   const items = useMemo(
     () =>
       Object.entries(seleccion)
@@ -67,7 +70,7 @@ export function NuevoRetiroForm({
         .map(([strainId, amount]) => ({ strainId, amount })),
     [seleccion],
   );
-  const valido = total >= MIN_RETIRO && items.length > 0 && !!fecha && !!horario;
+  const valido = total >= minRetiro && items.length > 0 && !!fecha && !!horario;
 
   const proximasFechas = useMemo(() => {
     const out: Date[] = [];
@@ -84,13 +87,22 @@ export function NuevoRetiroForm({
 
   const sumar = (id: string) => {
     if (!puedeSumar) return;
-    setSeleccion((s) => ({ ...s, [id]: (s[id] ?? 0) + STEP }));
+    setSeleccion((s) => {
+      const actual = s[id] ?? 0;
+      // El primer gramo de una variedad arranca en el mínimo por variedad; a
+      // partir de ahí sube de a un múltiplo (step).
+      const inc = actual === 0 ? Math.max(minPorVariedad, step) : step;
+      return { ...s, [id]: actual + inc };
+    });
   };
   const restar = (id: string) => {
     setSeleccion((s) => {
       const next = { ...s };
-      const v = (next[id] ?? 0) - STEP;
-      if (v <= 0) delete next[id];
+      const actual = next[id] ?? 0;
+      // Bajar un step; si al bajar queda por debajo del mínimo por variedad, se
+      // quita la variedad del pedido.
+      const v = actual - step;
+      if (v < minPorVariedad) delete next[id];
       else next[id] = v;
       return next;
     });
@@ -131,7 +143,7 @@ export function NuevoRetiroForm({
           />
         </div>
         <p className="text-xs text-[var(--muted-foreground)] mt-2">
-          mínimo {MIN_RETIRO} g por retiro
+          mínimo {minRetiro} g por retiro
         </p>
       </section>
 
@@ -203,13 +215,13 @@ export function NuevoRetiroForm({
               cant={seleccion[g.id] ?? 0}
               onSumar={() => sumar(g.id)}
               onRestar={() => restar(g.id)}
-              puedeSumar={puedeSumar && (seleccion[g.id] ?? 0) + STEP <= g.stock}
+              puedeSumar={puedeSumar && (seleccion[g.id] ?? 0) + step <= g.stock}
             />
           ))}
         </div>
-        {total > 0 && total < MIN_RETIRO && (
+        {total > 0 && total < minRetiro && (
           <p className="text-xs text-[var(--muted-foreground)] mt-2">
-            Mínimo {MIN_RETIRO} g por retiro.
+            Mínimo {minRetiro} g por retiro.
           </p>
         )}
         {state?.fieldErrors?.items && (
@@ -255,7 +267,7 @@ export function NuevoRetiroForm({
                   ? "Elegí una fecha"
                   : !horario
                     ? "Elegí un horario"
-                    : `Mínimo ${MIN_RETIRO} g`}
+                    : `Mínimo ${minRetiro} g`}
         </button>
         </div>
       </div>

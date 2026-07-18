@@ -43,11 +43,25 @@ export function Sidebar({
   footer?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  // Retraído en desktop: se guarda la preferencia para que persista entre visitas.
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    setCollapsed(localStorage.getItem("sidebar-collapsed") === "1");
+  }, []);
+
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      const next = !c;
+      localStorage.setItem("sidebar-collapsed", next ? "1" : "0");
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -82,13 +96,37 @@ export function Sidebar({
         <div className="min-w-0">{brand}</div>
       </div>
 
+      {/* Botón para volver a mostrar el sidebar cuando está retraído (desktop). */}
+      {collapsed && (
+        <button
+          type="button"
+          aria-label="Mostrar menú"
+          onClick={toggleCollapsed}
+          className="hidden lg:flex fixed top-3 left-3 z-30 items-center justify-center h-8 w-8 rounded-md bg-[var(--surface-2)] text-[var(--muted-foreground)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] transition-colors"
+        >
+          <SidebarToggleIcon collapsed />
+        </button>
+      )}
+
       {/* Sidebar desktop: misma superficie que el panel de contenido
           (--surface-2), separados solo por la línea de borde del panel. */}
-      <aside className="hidden lg:flex flex-col w-72 shrink-0 h-screen sticky top-0 bg-[var(--surface-2)]">
-        <div className="px-4 pt-5 pb-3 flex items-center shrink-0">{brand}</div>
-        {nav}
-        {footer && <div className="shrink-0">{footer}</div>}
-      </aside>
+      {!collapsed && (
+        <aside className="hidden lg:flex flex-col w-72 shrink-0 h-screen sticky top-0 bg-[var(--surface-2)]">
+          <div className="px-4 pt-5 pb-3 flex items-center gap-2 shrink-0">
+            <div className="min-w-0 flex-1">{brand}</div>
+            <button
+              type="button"
+              aria-label="Retraer menú"
+              onClick={toggleCollapsed}
+              className="inline-flex items-center justify-center h-7 w-7 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] transition-colors shrink-0"
+            >
+              <SidebarToggleIcon collapsed={false} />
+            </button>
+          </div>
+          {nav}
+          {footer && <div className="shrink-0">{footer}</div>}
+        </aside>
+      )}
 
       {/* Off-canvas mobile */}
       {open && (
@@ -230,6 +268,26 @@ function SidebarLink({ item, active }: { item: SidebarItem; active: boolean }) {
 function isActive(pathname: string, href: string): boolean {
   if (pathname === href) return true;
   return pathname.startsWith(href + "/");
+}
+
+/** Ícono minimalista de retraer/expandir: panel con la barra lateral marcada. */
+function SidebarToggleIcon({ collapsed: _collapsed }: { collapsed: boolean }) {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <line x1="9" y1="4" x2="9" y2="20" />
+    </svg>
+  );
 }
 
 function BurgerIcon() {

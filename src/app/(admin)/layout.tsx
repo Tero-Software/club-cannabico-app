@@ -31,10 +31,14 @@ export default async function AdminLayout({
   const [pendingRetiros, pendingPostulaciones, viewer, tenant] =
     await Promise.all([
       can(session, "retiros:manage")
-        ? prisma.withdrawal.count({ where: { status: "PENDING" } })
+        ? prisma.withdrawal.count({
+            where: { tenantId: session.user.tenantId, status: "PENDING" },
+          })
         : 0,
       can(session, "postulaciones:manage")
-        ? prisma.application.count({ where: { status: "PENDING" } })
+        ? prisma.application.count({
+            where: { tenantId: session.user.tenantId, status: "PENDING" },
+          })
         : 0,
       prisma.user.findUnique({
         where: { id: session.user.id },
@@ -128,7 +132,7 @@ export default async function AdminLayout({
         },
         {
           href: "/administrador/operativa/cosechas",
-          label: "Cosecha",
+          label: "Cosechas",
           icon: <CosechasIcon />,
           show: true,
         },

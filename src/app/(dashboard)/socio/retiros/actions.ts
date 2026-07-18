@@ -93,6 +93,16 @@ export async function crearRetiroAction(
     return { error: `Mínimo ${config.minGramosRetiro} g por retiro.` };
   }
 
+  // Cada variedad debe respetar el mínimo por variedad y ser un múltiplo válido.
+  for (const it of validItems) {
+    if (it.amount < config.minGramosPorVariedad) {
+      return { error: `Mínimo ${config.minGramosPorVariedad} g por variedad.` };
+    }
+    if (it.amount % config.multiploGramos !== 0) {
+      return { error: `Las cantidades deben ser múltiplos de ${config.multiploGramos} g.` };
+    }
+  }
+
   const geneticaIds = validItems.map((i) => i.strainId);
   if (new Set(geneticaIds).size !== geneticaIds.length) {
     return { error: "No podés repetir variedades en el mismo retiro." };

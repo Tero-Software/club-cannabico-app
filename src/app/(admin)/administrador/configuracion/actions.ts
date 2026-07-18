@@ -87,6 +87,98 @@ export async function updateClubConfigAction(
   return { ok: true };
 }
 
+// Actualización parcial de un solo parámetro del club. La edición de
+// configuración es campo por campo (cada uno con su lápiz y su guardar), así que
+// se valida y guarda solo el campo tocado, respetando las reglas cruzadas.
+const partialSchemas = {
+  city: optionalText(120),
+  tagline: optionalText(200),
+  description: optionalText(2000),
+  workingDays: schema.shape.workingDays,
+  timeSlots: schema.shape.timeSlots,
+  maxGramsPerMonth: schema.shape.maxGramsPerMonth,
+  minGramsPerWithdrawal: schema.shape.minGramsPerWithdrawal,
+  minGramsPerStrain: schema.shape.minGramsPerStrain,
+  gramsStep: schema.shape.gramsStep,
+  cobroExcedente: z.enum(["PROPORCIONAL", "FRANJA_MAS_EXCEDENTE"]),
+} as const;
+
+type ConfigField = keyof typeof partialSchemas;
+
+export type FieldUpdateState = { ok?: true; error?: string } | null;
+
+export async function updateClubFieldAction(
+  _prev: FieldUpdateState,
+  fd: FormData,
+): Promise<FieldUpdateState> {
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return { error: "No autorizado" };
+  }
+  const tenantId = session.user.tenantId;
+
+  const field = String(fd.get("field") ?? "") as ConfigField;
+  const fieldSchema = partialSchemas[field];
+  if (!fieldSchema) return { error: "Campo inválido" };
+
+  // El valor llega distinto según el tipo del campo.
+  let raw: unknown;
+  if (field === "workingDays") {
+    raw = fd.getAll("value").map((v) => Number(v));
+  } else if (field === "timeSlots") {
+    raw = fd
+      .getAll("value")
+      .map((v) => String(v).trim())
+      .filter(Boolean);
+  } else if (
+    field === "maxGramsPerMonth" ||
+    field === "minGramsPerWithdrawal" ||
+    field === "minGramsPerStrain" ||
+    field === "gramsStep"
+  ) {
+    raw = Number(fd.get("value"));
+  } else {
+    raw = String(fd.get("value") ?? "");
+  }
+
+  const parsed = fieldSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Valor inválido" };
+  }
+
+  // Reglas cruzadas: al cambiar un límite, se valida contra los otros ya guardados.
+  const current = await prisma.tenant.findUniqueOrThrow({
+    where: { id: tenantId },
+    select: {
+      maxGramsPerMonth: true,
+      minGramsPerWithdrawal: true,
+      minGramsPerStrain: true,
+    },
+  });
+  const next = { ...current, [field]: parsed.data as number };
+  if (
+    (field === "maxGramsPerMonth" || field === "minGramsPerWithdrawal") &&
+    next.minGramsPerWithdrawal > next.maxGramsPerMonth
+  ) {
+    return { error: "El mínimo por retiro no puede superar el cupo mensual" };
+  }
+  if (
+    (field === "minGramsPerWithdrawal" || field === "minGramsPerStrain") &&
+    next.minGramsPerStrain > next.minGramsPerWithdrawal
+  ) {
+    return { error: "El mínimo por variedad no puede superar el mínimo por retiro" };
+  }
+
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: { [field]: parsed.data },
+  });
+
+  invalidateClubConfig(tenantId);
+  revalidatePath("/administrador/configuracion");
+  return { ok: true };
+}
+
 // Fija el plan de membresía por defecto del club (el setting general de cobro).
 // Se aplica a todo socio sin plan propio. Vacío = el club no cobra por defecto.
 export type DefaultPlanState = { ok?: true; error?: string } | null;

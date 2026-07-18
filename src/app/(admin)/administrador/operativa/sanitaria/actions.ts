@@ -64,6 +64,56 @@ export async function createTreatment(formData: FormData) {
   return { ok: true, id: treatment.id };
 }
 
+/* ── Editar tratamiento ───────────────────────────────────
+   Edita la fecha, a qué plantas aplica y la descripción del tratamiento. */
+export async function updateTreatment(formData: FormData) {
+  const session = await requireAdmin();
+  const tenantId = session.user.tenantId;
+
+  const id = String(formData.get("id") || "");
+  if (!id) return { error: "Falta el tratamiento" };
+
+  const treatment = await prisma.treatment.findFirst({
+    where: { id, tenantId },
+    select: { id: true },
+  });
+  if (!treatment) return { error: "El tratamiento no existe" };
+
+  const date = parseDate(formData.get("date"));
+  if (!date) return { error: "Fecha inválida" };
+
+  const description = String(formData.get("description") || "").trim();
+  if (!description) return { error: "Falta el tratamiento" };
+
+  const plantId = String(formData.get("plantId") || "") || null;
+  const appliesToAll = !plantId;
+
+  if (plantId) {
+    const plant = await prisma.plant.findFirst({
+      where: { id: plantId, tenantId },
+      select: { id: true },
+    });
+    if (!plant) return { error: "La planta no existe" };
+  }
+
+  await prisma.treatment.update({
+    where: { id },
+    data: { date, description, appliesToAll, plantId },
+  });
+
+  await audit({
+    tenantId,
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "sanitaria.editar",
+    entity: "Treatment",
+    entityId: id,
+  });
+
+  revalidatePath(PATH);
+  return { ok: true };
+}
+
 /* ── Borrar tratamiento ───────────────────────────────────*/
 export async function deleteTreatment(formData: FormData) {
   const session = await requireAdmin();

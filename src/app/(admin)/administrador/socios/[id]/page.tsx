@@ -10,7 +10,14 @@ import { DataTable, type Column } from "@/components/ui/data-table";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await prisma.user.findUnique({ where: { id }, select: { name: true } });
+  const session = await auth();
+  // Nada se comparte entre clubes: solo se muestra el nombre si el socio es del
+  // club de la sesión. Sin permiso o de otro club, título genérico.
+  if (!can(session, "socios:manage")) return { title: "Socio" };
+  const user = await prisma.user.findFirst({
+    where: { id, tenantId: session!.user.tenantId },
+    select: { name: true },
+  });
   return { title: user ? `${user.name} — Socios` : "Socio" };
 }
 

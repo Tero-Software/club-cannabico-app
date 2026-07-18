@@ -47,14 +47,15 @@ export function DataTable<Row>({
     a === "right" ? "text-right" : a === "center" ? "text-center" : "text-left";
 
   return (
-    <div className="card p-0 overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="sticky top-0 z-10 bg-[var(--surface-3)] text-left text-[0.7rem] font-normal text-[var(--fg-quaternary)] uppercase tracking-wide">
+    // Sin overflow-hidden: rompería el anclado sticky del thead.
+    <div className="card p-0">
+      <table className="w-full text-sm border-separate border-spacing-0">
+        <thead className="text-left text-[0.7rem] font-normal text-[var(--fg-quaternary)] uppercase tracking-wide">
           <tr>
             {columns.map((c, i) => (
               <th
                 key={i}
-                className={`px-4 py-2 font-normal ${alignClass(c.align)} ${c.headClassName ?? ""}`}
+                className={`sticky top-0 z-10 bg-[var(--surface-3)] px-4 py-2 font-normal ${alignClass(c.align)} ${c.headClassName ?? ""}`}
                 style={c.width ? { width: c.width } : undefined}
               >
                 {c.label}
@@ -74,14 +75,11 @@ export function DataTable<Row>({
             </tr>
           ) : (
             rows.map((row) => (
-              <tr
-                key={getRowKey(row)}
-                className={`border-t border-[var(--border)] ${onRowClassName?.(row) ?? ""}`}
-              >
+              <tr key={getRowKey(row)} className={onRowClassName?.(row) ?? ""}>
                 {columns.map((c, i) => (
                   <td
                     key={i}
-                    className={`px-4 py-3 ${alignClass(c.align)} ${
+                    className={`border-t border-[var(--border)] px-4 py-3 ${alignClass(c.align)} ${
                       c.muted ? "text-[var(--muted-foreground)]" : ""
                     } ${c.cellClassName ?? ""}`}
                   >

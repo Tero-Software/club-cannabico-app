@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { updateClubConfigAction, type ConfigState } from "./actions";
+import { useState, useTransition } from "react";
+import { updateClubFieldAction } from "./actions";
 import { SavingSpinner } from "@/components/ui/saving-spinner";
+import { PencilIcon } from "@/components/ui/icons";
+import { TimeSlotsEditor } from "./time-slots-editor";
 
 const DIAS = [
   { value: 1, label: "Lun" },
@@ -13,6 +15,15 @@ const DIAS = [
   { value: 6, label: "Sáb" },
   { value: 0, label: "Dom" },
 ];
+
+type Field =
+  | "city"
+  | "tagline"
+  | "description"
+  | "maxGramsPerMonth"
+  | "minGramsPerWithdrawal"
+  | "minGramsPerStrain"
+  | "gramsStep";
 
 export function ConfigForm({
   initial,
@@ -29,224 +40,269 @@ export function ConfigForm({
     gramsStep: number;
   };
 }) {
-  const [state, action, pending] = useActionState<ConfigState, FormData>(
-    updateClubConfigAction,
-    null,
-  );
-  const [days, setDays] = useState<number[]>(initial.workingDays);
-  const [justSaved, setJustSaved] = useState(false);
-
-  useEffect(() => {
-    if (state && "ok" in state && state.ok) {
-      setJustSaved(true);
-      const t = setTimeout(() => setJustSaved(false), 2500);
-      return () => clearTimeout(t);
-    }
-  }, [state]);
-
-  const toggleDay = (d: number) => {
-    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
-  };
-
-  const fieldErrors = state && "error" in state ? state.fieldErrors : undefined;
-
   return (
-    <form action={action} className="card flex flex-col gap-6">
-      {days.map((d) => (
-        <input key={d} type="hidden" name="workingDays" value={d} />
-      ))}
-
-      <div className="flex flex-col gap-4 pb-2 border-b border-[var(--border)]">
-        <div>
+    <div className="space-y-8">
+      {/* Presentación pública */}
+      <section>
+        <div className="mb-3">
           <h3 className="text-sm font-medium">Presentación pública</h3>
           <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
             Lo que se muestra en la portada del club.
           </p>
         </div>
-
-        <div>
-          <label htmlFor="city" className="label">
-            Ciudad
-          </label>
-          <input
-            id="city"
-            name="city"
-            type="text"
-            maxLength={120}
-            defaultValue={initial.city ?? ""}
+        <div className="card p-0 [&>*+*]:border-t [&>*+*]:border-[var(--border-subtle)]">
+          <EditableRow
+            field="city"
+            label="Ciudad"
+            value={initial.city ?? ""}
             placeholder="Montevideo"
-            className="input"
           />
-        </div>
-
-        <div>
-          <label htmlFor="tagline" className="label">
-            Frase de portada
-          </label>
-          <input
-            id="tagline"
-            name="tagline"
-            type="text"
-            maxLength={200}
-            defaultValue={initial.tagline ?? ""}
+          <EditableRow
+            field="tagline"
+            label="Frase de portada"
+            value={initial.tagline ?? ""}
             placeholder="Cultivo colectivo y responsable"
-            className="input"
           />
-        </div>
-
-        <div>
-          <label htmlFor="description" className="label">
-            Descripción
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            rows={4}
-            maxLength={2000}
-            defaultValue={initial.description ?? ""}
+          <EditableRow
+            field="description"
+            label="Descripción"
+            value={initial.description ?? ""}
             placeholder="Quiénes somos, cómo funciona el club, etc."
-            className="input"
+            multiline
           />
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">
-            Texto libre. Los saltos de línea se respetan en la portada.
-          </p>
         </div>
-      </div>
+      </section>
 
-      <div>
-        <label className="label">Días hábiles de retiro</label>
-        <div className="flex flex-wrap gap-2">
-          {DIAS.map((d) => {
-            const activo = days.includes(d.value);
-            return (
-              <button
-                key={d.value}
-                type="button"
-                onClick={() => toggleDay(d.value)}
-                className={`px-4 py-2 rounded-full border text-sm transition-all ${
-                  activo
-                    ? "border-[var(--primary)] bg-[var(--primary)] text-white"
-                    : "border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--muted)]"
-                }`}
-              >
-                {d.label}
-              </button>
-            );
-          })}
+      {/* Días hábiles y franjas horarias */}
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-medium">Días y horarios de retiro</h3>
         </div>
-        {fieldErrors?.workingDays && (
-          <p className="text-sm text-[var(--destructive)] mt-1">{fieldErrors.workingDays}</p>
-        )}
-      </div>
+        <div className="card p-0 [&>*+*]:border-t [&>*+*]:border-[var(--border-subtle)]">
+          <div className="px-5 py-4">
+            <WorkingDays initial={initial.workingDays} />
+          </div>
+          <div className="px-5 py-4">
+            <TimeSlotsEditor initial={initial.timeSlots} />
+          </div>
+        </div>
+      </section>
 
-      <div>
-        <label htmlFor="timeSlots" className="label">
-          Franjas horarias
-        </label>
-        <textarea
-          id="timeSlots"
-          name="timeSlots"
-          rows={3}
-          defaultValue={initial.timeSlots.join("\n")}
-          placeholder="18:00-19:00&#10;19:00-20:00"
-          className="input font-mono text-sm"
-        />
-        <p className="text-xs text-[var(--muted-foreground)] mt-1">
-          Una franja por línea o separadas por coma. Formato HH:MM-HH:MM.
-        </p>
-        {fieldErrors?.timeSlots && (
-          <p className="text-sm text-[var(--destructive)] mt-1">{fieldErrors.timeSlots}</p>
-        )}
-      </div>
+      {/* Límites de cupo */}
+      <section>
+        <div className="mb-3">
+          <h3 className="text-sm font-medium">Límites de retiro</h3>
+        </div>
+        <div className="card p-0 [&>*+*]:border-t [&>*+*]:border-[var(--border-subtle)]">
+          <EditableRow
+            field="maxGramsPerMonth"
+            label="Cupo mensual por socio (g)"
+            value={String(initial.maxGramsPerMonth)}
+            numeric
+          />
+          <EditableRow
+            field="minGramsPerWithdrawal"
+            label="Mínimo por retiro (g)"
+            value={String(initial.minGramsPerWithdrawal)}
+            numeric
+          />
+          <EditableRow
+            field="minGramsPerStrain"
+            label="Mínimo por variedad (g)"
+            value={String(initial.minGramsPerStrain)}
+            numeric
+          />
+          <EditableRow
+            field="gramsStep"
+            label="Múltiplo de gramos"
+            hint="¿De a cuánto pueden agregar tus socios al pedir? Con 10, solo cantidades redondas (10, 20, 30…), con 1, cualquier cantidad."
+            value={String(initial.gramsStep)}
+            numeric
+          />
+        </div>
+      </section>
+    </div>
+  );
+}
 
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="maxGramsPerMonth" className="label">
-            Cupo mensual por socio (g)
-          </label>
-          <input
-            id="maxGramsPerMonth"
-            name="maxGramsPerMonth"
-            type="number"
-            min={1}
-            defaultValue={initial.maxGramsPerMonth}
-            required
-            className="input"
-          />
-          {fieldErrors?.maxGramsPerMonth && (
-            <p className="text-sm text-[var(--destructive)] mt-1">{fieldErrors.maxGramsPerMonth}</p>
-          )}
-        </div>
-        <div>
-          <label htmlFor="minGramsPerWithdrawal" className="label">
-            Mínimo por retiro (g)
-          </label>
-          <input
-            id="minGramsPerWithdrawal"
-            name="minGramsPerWithdrawal"
-            type="number"
-            min={1}
-            defaultValue={initial.minGramsPerWithdrawal}
-            required
-            className="input"
-          />
-          {fieldErrors?.minGramsPerWithdrawal && (
-            <p className="text-sm text-[var(--destructive)] mt-1">{fieldErrors.minGramsPerWithdrawal}</p>
-          )}
-        </div>
-        <div>
-          <label htmlFor="minGramsPerStrain" className="label">
-            Mínimo por variedad (g)
-          </label>
-          <input
-            id="minGramsPerStrain"
-            name="minGramsPerStrain"
-            type="number"
-            min={1}
-            defaultValue={initial.minGramsPerStrain}
-            required
-            className="input"
-          />
-          {fieldErrors?.minGramsPerStrain && (
-            <p className="text-sm text-[var(--destructive)] mt-1">{fieldErrors.minGramsPerStrain}</p>
-          )}
-        </div>
-        <div>
-          <label htmlFor="gramsStep" className="label">
-            Múltiplo de gramos
-          </label>
-          <input
-            id="gramsStep"
-            name="gramsStep"
-            type="number"
-            min={1}
-            defaultValue={initial.gramsStep}
-            required
-            className="input"
-          />
-          {fieldErrors?.gramsStep && (
-            <p className="text-sm text-[var(--destructive)] mt-1">{fieldErrors.gramsStep}</p>
-          )}
-        </div>
-      </div>
+/**
+ * Fila de un parámetro: muestra el valor con un lápiz a la derecha; al tocarlo
+ * aparece el campo editable con guardar/cancelar. Guarda solo ese campo.
+ */
+function EditableRow({
+  field,
+  label,
+  hint,
+  value: initialValue,
+  placeholder,
+  multiline,
+  numeric,
+}: {
+  field: Field;
+  label: string;
+  hint?: string;
+  value: string;
+  placeholder?: string;
+  multiline?: boolean;
+  numeric?: boolean;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const [draft, setDraft] = useState(initialValue);
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
 
-      {state && "error" in state && state.error && (
-        <p className="text-sm text-[var(--destructive)]">{state.error}</p>
+  function open() {
+    setDraft(value);
+    setError(null);
+    setEditing(true);
+  }
+
+  function save() {
+    start(async () => {
+      setError(null);
+      const fd = new FormData();
+      fd.set("field", field);
+      fd.set("value", draft);
+      const res = await updateClubFieldAction(null, fd);
+      if (res && "error" in res && res.error) {
+        setError(res.error);
+      } else {
+        setValue(draft);
+        setEditing(false);
+      }
+    });
+  }
+
+  return (
+    <div className="px-5 py-3">
+      {!editing ? (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-medium">
+              {label}
+              {hint && (
+                <span className="font-normal text-[var(--muted-foreground)]">
+                  {" "}— {hint}
+                </span>
+              )}
+            </div>
+            <div
+              className={`text-sm mt-0.5 ${
+                value
+                  ? "text-[var(--muted-foreground)] whitespace-pre-wrap"
+                  : "text-[var(--fg-quaternary)] italic"
+              }`}
+            >
+              {value || "Sin definir"}
+            </div>
+          </div>
+          <button
+            type="button"
+            aria-label={`Editar ${label}`}
+            onClick={open}
+            className="inline-flex items-center justify-center h-7 w-7 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-colors shrink-0"
+          >
+            <PencilIcon />
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium">{label}</label>
+          {multiline ? (
+            <textarea
+              autoFocus
+              rows={4}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={placeholder}
+              className="input"
+            />
+          ) : (
+            <input
+              autoFocus
+              type={numeric ? "number" : "text"}
+              min={numeric ? 1 : undefined}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={placeholder}
+              className="input"
+            />
+          )}
+          {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              className="btn btn-primary text-sm inline-flex items-center gap-2"
+            >
+              {pending && <SavingSpinner />}
+              Guardar
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="btn btn-ghost text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
       )}
+    </div>
+  );
+}
 
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="btn btn-primary inline-flex items-center gap-2"
-        >
-          {pending && <SavingSpinner />}
-          Guardar cambios
-        </button>
-        {justSaved && (
-          <span className="text-sm text-[var(--primary)]">Guardado.</span>
-        )}
+/** Días hábiles: toggles que guardan al instante (edición individual). */
+function WorkingDays({ initial }: { initial: number[] }) {
+  const [days, setDays] = useState<number[]>(initial);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  function toggle(d: number) {
+    const next = days.includes(d) ? days.filter((x) => x !== d) : [...days, d];
+    setDays(next);
+    start(async () => {
+      setError(null);
+      const fd = new FormData();
+      fd.set("field", "workingDays");
+      for (const v of next) fd.append("value", String(v));
+      const res = await updateClubFieldAction(null, fd);
+      if (res && "error" in res && res.error) {
+        setError(res.error);
+        setDays(days); // revertir en caso de error
+      }
+    });
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-sm font-medium">Días hábiles de retiro</span>
+        {pending && <SavingSpinner />}
       </div>
-    </form>
+      <div className="flex flex-wrap gap-2">
+        {DIAS.map((d) => {
+          const activo = days.includes(d.value);
+          return (
+            <button
+              key={d.value}
+              type="button"
+              onClick={() => toggle(d.value)}
+              disabled={pending}
+              className={`px-4 py-2 rounded-full border text-sm transition-all ${
+                activo
+                  ? "border-[var(--primary)] bg-[var(--primary)] text-white"
+                  : "border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--muted)]"
+              }`}
+            >
+              {d.label}
+            </button>
+          );
+        })}
+      </div>
+      {error && <p className="text-sm text-[var(--destructive)] mt-1">{error}</p>}
+    </div>
   );
 }

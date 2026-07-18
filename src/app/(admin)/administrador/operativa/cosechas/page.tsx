@@ -6,7 +6,7 @@ import { prisma } from "@/lib/db";
 import { PageHeader, EmptyState } from "@/components/ui/page-scaffold";
 import { CosechasPanel } from "./cosechas-panel";
 
-export const metadata = { title: "Cosecha (operativa)" };
+export const metadata = { title: "Cosechas (operativa)" };
 
 export default async function CosechasPage() {
   const session = await auth();
@@ -56,7 +56,7 @@ export default async function CosechasPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Cosecha"
+        title="Cosechas"
         description="Carga de cosecha antes de declararla al acopio. Al declarar, sus contenedores pasan a acopio."
         action={
           <Link
@@ -74,7 +74,7 @@ export default async function CosechasPage() {
         <EmptyState
           icon={<CosechaIcon />}
           title="No hay cosechas en curso"
-          description="Creá una cosecha para empezar a cargar contenedores. Mientras no la declares, su contenido no aparece en acopio."
+          description="Las cosechas se crean en Trazabilidad. Una vez creadas aparecen acá para cargar contenedores y declararlas. Mientras no la declares, su contenido no aparece en acopio."
         />
       )}
     </div>

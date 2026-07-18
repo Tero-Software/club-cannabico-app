@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Estilos base del wheel picker de franjas horarias (@ncdai/react-wheel-picker). */
+@import "@ncdai/react-wheel-picker/style.css";
 
 /* Design tokens calcados del sistema real de Linear (valores exactos extraídos
    de su CSS de producción; ver .claude/linear-tokens-raw.css). Se conservan los

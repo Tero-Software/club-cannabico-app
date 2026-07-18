@@ -171,7 +171,7 @@ export async function approveWithdrawalAction(
   ]);
   const totalGrams = w.items.reduce((s, i) => s + i.amount, 0);
   const charge = plan
-    ? computeWithdrawalCharge(plan, totalGrams, config.maxGramosMes)
+    ? computeWithdrawalCharge(plan, totalGrams, config.cobroExcedente)
     : null;
 
   // En la aprobación solo se congela la forma de pago (pagó/no), el monto y el
@@ -254,7 +254,7 @@ export async function updatePaymentAction(
   ]);
   const totalGrams = w.items.reduce((s, i) => s + i.amount, 0);
   const charge = plan
-    ? computeWithdrawalCharge(plan, totalGrams, config.maxGramosMes)
+    ? computeWithdrawalCharge(plan, totalGrams, config.cobroExcedente)
     : null;
 
   await prisma.$transaction(async (tx) => {
@@ -422,7 +422,7 @@ export async function crearRetiroAdminAction(
   const planId = planIdInput ?? socio.membershipPlanId;
   const plan = await resolvePlanForMember(tenantId, planId);
   const charge = plan
-    ? computeWithdrawalCharge(plan, totalGramos, config.maxGramosMes)
+    ? computeWithdrawalCharge(plan, totalGramos, config.cobroExcedente)
     : null;
 
   try {
