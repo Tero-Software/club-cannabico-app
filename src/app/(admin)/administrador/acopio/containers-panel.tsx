@@ -20,7 +20,7 @@ export function ContainersPanel({
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <h1 className="text-3xl font-bold">Acopio</h1>
         <Link
-          href="/administrador/geneticas"
+          href="/administrador/operativa/geneticas"
           className="btn btn-secondary text-sm"
         >
           Editar genéticas

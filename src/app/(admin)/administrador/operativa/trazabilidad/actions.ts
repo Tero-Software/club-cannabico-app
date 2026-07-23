@@ -69,10 +69,21 @@ export async function createHarvest(formData: FormData) {
   const date = parseDate(formData.get("date"));
   if (!date) return { error: "Fecha de inicio inválida" };
 
+  // Entrada del plan de cultivo (opcional): da el número con el que se declara.
+  const planId = String(formData.get("planId") || "") || null;
+  if (planId) {
+    const plan = await prisma.plannedHarvest.findFirst({
+      where: { id: planId, tenantId },
+      select: { id: true },
+    });
+    if (!plan) return { error: "La entrada del plan no pertenece al club" };
+  }
+
   const harvest = await prisma.harvest.create({
     data: {
       tenantId,
       date,
+      planId,
       notes: String(formData.get("notes") || "") || null,
     },
     select: { id: true },

@@ -12,6 +12,7 @@ type Harvest = {
   id: string;
   date: string;
   declarada: boolean;
+  plan: { number: number } | null;
   notes: string | null;
   containers: ContainerRow[];
 };
@@ -61,7 +62,9 @@ function HarvestCard({
     <article className="card space-y-4">
       <header className="flex items-baseline justify-between gap-3 flex-wrap">
         <h3 className="font-semibold">
-          Cosecha del {fecha}{" "}
+          {harvest.plan
+            ? `Cosecha N.º ${harvest.plan.number} — ${new Date(harvest.date).getFullYear()}`
+            : `Cosecha del ${fecha}`}{" "}
           <span className="text-sm font-normal text-[var(--muted-foreground)]">
             · {harvest.containers.length} contenedor
             {harvest.containers.length === 1 ? "" : "es"} ·{" "}

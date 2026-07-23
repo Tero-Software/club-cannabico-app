@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { buildRule, periodForYear } from "@/lib/ejercicio";
 
 const PATH = "/administrador/directiva/memorias";
 
@@ -15,17 +16,9 @@ async function requireAdmin() {
   return session;
 }
 
-// El ejercicio del club va del 01/04 de un año al 31/03 del siguiente. El año
-// del ejercicio es el del inicio del período.
-function periodForYear(year: number): { start: Date; end: Date } {
-  return {
-    start: new Date(Date.UTC(year, 3, 1)), // 1 de abril
-    end: new Date(Date.UTC(year + 1, 2, 31)), // 31 de marzo del año siguiente
-  };
-}
-
 /* ── Crear memoria ────────────────────────────────────────
-   Abre la memoria de un ejercicio en borrador. El período se deriva del año.
+   Abre la memoria de un ejercicio en borrador. El período se deriva del año y
+   del cierre de ejercicio configurado del club (RRULE en Tenant).
    Un ejercicio por año: si ya existe, se rechaza. */
 export async function createMemoria(formData: FormData) {
   const session = await requireAdmin();
@@ -42,7 +35,17 @@ export async function createMemoria(formData: FormData) {
   });
   if (existing) return { error: `Ya existe la memoria del ejercicio ${year}` };
 
-  const { start, end } = periodForYear(year);
+  const tenant = await prisma.tenant.findUniqueOrThrow({
+    where: { id: tenantId },
+    select: { fiscalYearEndRule: true },
+  });
+  const rule = buildRule(tenant.fiscalYearEndRule);
+  if (!rule) {
+    return { error: "Definí el cierre del ejercicio en Configuración para crear memorias" };
+  }
+  const period = periodForYear(rule, year);
+  if (!period) return { error: "No se pudo derivar el período del ejercicio" };
+  const { start, end } = period;
 
   const memoria = await prisma.memoria.create({
     data: { tenantId, year, periodStart: start, periodEnd: end },
@@ -163,6 +166,16 @@ export async function updateMemoriaMilestone(formData: FormData) {
     data: { title, body },
   });
 
+  await audit({
+    tenantId,
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "memoria.hito.editar",
+    entity: "MemoriaMilestone",
+    entityId: id,
+    metadata: { title },
+  });
+
   revalidatePath(PATH);
   return { ok: true };
 }
@@ -190,6 +203,15 @@ export async function deleteMemoriaMilestone(formData: FormData) {
   if (left === 0) {
     await prisma.memoriaEntry.delete({ where: { id: hito.entryId } });
   }
+
+  await audit({
+    tenantId,
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "memoria.hito.borrar",
+    entity: "MemoriaMilestone",
+    entityId: id,
+  });
 
   revalidatePath(PATH);
   return { ok: true };

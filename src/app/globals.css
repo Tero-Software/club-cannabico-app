@@ -496,6 +496,14 @@ input[type="datetime-local"].input {
   display: none;
 }
 
+/* Cursor de lupa propio para abrir el preview de fotos: trazo fino oscuro con
+   halo blanco para que se lea sobre cualquier imagen. Fallback: zoom-in. */
+.cursor-lupa {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 24 24' fill='none' stroke-linecap='round'%3E%3Cg stroke='white' stroke-width='3.4'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.3 15.3 20 20'/%3E%3C/g%3E%3Cg stroke='%23202124' stroke-width='1.4'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='M15.3 15.3 20 20'/%3E%3C/g%3E%3C/svg%3E")
+      11 11,
+    zoom-in;
+}
+
 /* Barra de carga (bprogress): fina y con el acento. Un solo lugar de control. */
 :root {
   --bprogress-height: 1px;

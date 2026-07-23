@@ -148,6 +148,8 @@ function FinishMeetingButton({
 }) {
   const [pending, start] = useTransition();
   const [armed, setArmed] = useState(false);
+  // Fecha del acta: por defecto el día en que se genera, editable a mano.
+  const [fecha, setFecha] = useState(() => new Date().toISOString().slice(0, 10));
 
   function click() {
     if (!armed) {
@@ -158,22 +160,33 @@ function FinishMeetingButton({
     start(async () => {
       const fd = new FormData();
       fd.set("meetingId", meetingId);
+      fd.set("date", fecha);
       await finishMeeting(fd);
     });
   }
 
   return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={click}
-      className={`btn text-sm inline-flex items-center gap-2 ${
-        armed ? "btn-destructive" : "btn-primary"
-      }`}
-    >
-      {pending && <SavingSpinner />}
-      {armed ? "Confirmar: queda como acta" : `Terminar ${termino}`}
-    </button>
+    <div className="flex items-center gap-3">
+      <input
+        type="date"
+        value={fecha}
+        onChange={(e) => setFecha(e.target.value)}
+        className="input w-fit"
+        aria-label="Fecha del acta"
+        title="Fecha del acta"
+      />
+      <button
+        type="button"
+        disabled={pending}
+        onClick={click}
+        className={`btn text-sm inline-flex items-center gap-2 shrink-0 ${
+          armed ? "btn-destructive" : "btn-primary"
+        }`}
+      >
+        {pending && <SavingSpinner />}
+        {armed ? "Confirmar: queda como acta" : `Terminar ${termino}`}
+      </button>
+    </div>
   );
 }
 

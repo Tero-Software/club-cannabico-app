@@ -26,6 +26,15 @@ export async function startTotpEnrollment(
     data: { totpSecret: secret, totpEnabled: false },
   });
   const uri = totpUri(secret, session.user.email);
+
+  await audit({
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "auth.totp.enroll",
+    entity: "User",
+    entityId: session.user.id,
+  });
+
   return { secret, uri };
 }
 

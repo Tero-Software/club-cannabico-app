@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
+import { buildRule } from "@/lib/ejercicio";
+import { formatDateShort } from "@/lib/format";
 
 type MeetingType = "DIRECTIVA" | "ASAMBLEA";
 
@@ -27,14 +29,15 @@ async function requireAdmin() {
 
 // Orden del día base de la asamblea general ordinaria: los dos puntos que el
 // estatuto manda tratar siempre (Memoria y Balance del ejercicio cerrado). Se
-// precargan como temas editables; el resto se agrega en vivo. El ejercicio
-// cierra el 31 de marzo, así que el año del ejercicio es el de la asamblea.
-function ordenDelDiaAsamblea(date: Date): { title: string; body: string }[] {
-  const ejercicio = date.getFullYear();
+// precargan como temas editables; el resto se agrega en vivo. La fecha del
+// cierre sale de la regla configurada del club (último cierre ocurrido); si el
+// club no la configuró, el texto queda sin fecha.
+function ordenDelDiaAsamblea(cierre: Date | null): { title: string; body: string }[] {
+  const cerrado = cierre ? ` cerrado el ${formatDateShort(cierre)}` : "";
   return [
     {
       title: "Memoria Anual.",
-      body: `Se da lectura a la Memoria correspondiente al ejercicio cerrado el 31 de marzo de ${ejercicio}. Considerada por la Asamblea, se aprueba por unanimidad.`,
+      body: `Se da lectura a la Memoria correspondiente al ejercicio${cerrado}. Considerada por la Asamblea, se aprueba por unanimidad.`,
     },
     {
       title: "Balance y estado de cuentas.",
@@ -66,10 +69,15 @@ export async function startMeeting(type: MeetingType) {
   const number = (last?.number ?? 0) + 1;
 
   const date = new Date();
-  const baseItems =
-    type === "ASAMBLEA"
-      ? ordenDelDiaAsamblea(date).map((it) => ({ tenantId, ...it }))
-      : [];
+  let baseItems: { tenantId: string; title: string; body: string }[] = [];
+  if (type === "ASAMBLEA") {
+    const tenant = await prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { fiscalYearEndRule: true },
+    });
+    const cierre = buildRule(tenant.fiscalYearEndRule)?.before(date, true) ?? null;
+    baseItems = ordenDelDiaAsamblea(cierre).map((it) => ({ tenantId, ...it }));
+  }
 
   const meeting = await prisma.meeting.create({
     data: {
@@ -115,8 +123,19 @@ export async function addItem(formData: FormData) {
   });
   if (!meeting) return { error: "La junta no está abierta" };
 
-  await prisma.meetingItem.create({
+  const item = await prisma.meetingItem.create({
     data: { tenantId, meetingId, title, body },
+    select: { id: true },
+  });
+
+  await audit({
+    tenantId,
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "junta.tema.agregar",
+    entity: "MeetingItem",
+    entityId: item.id,
+    metadata: { meetingId, title },
   });
 
   revalidatePath(PATH[meeting.type]);
@@ -141,6 +160,17 @@ export async function updateItem(formData: FormData) {
   if (!item) return { error: "No se puede editar" };
 
   await prisma.meetingItem.update({ where: { id }, data: { title, body } });
+
+  await audit({
+    tenantId,
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "junta.tema.editar",
+    entity: "MeetingItem",
+    entityId: id,
+    metadata: { title },
+  });
+
   revalidatePath(PATH[item.meeting.type]);
   return { ok: true };
 }
@@ -160,12 +190,23 @@ export async function deleteItem(formData: FormData) {
   if (!item) return { error: "No se puede borrar" };
 
   await prisma.meetingItem.delete({ where: { id } });
+
+  await audit({
+    tenantId,
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "junta.tema.borrar",
+    entity: "MeetingItem",
+    entityId: id,
+  });
+
   revalidatePath(PATH[item.meeting.type]);
   return { ok: true };
 }
 
 /* ── Terminar junta ───────────────────────────────────────
-   Cierra el acta. Persiste presentes y fecha definitivos. */
+   Cierra el acta. Persiste presentes y fecha definitivos. La fecha del acta es
+   la del día en que se genera; se puede pisar a mano desde el formulario. */
 export async function finishMeeting(formData: FormData) {
   const session = await requireAdmin();
   const tenantId = session.user.tenantId;
@@ -178,6 +219,12 @@ export async function finishMeeting(formData: FormData) {
     .map((a) => String(a).trim())
     .filter(Boolean);
 
+  const dateStr = String(formData.get("date") || "").trim();
+  if (dateStr && !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return { error: "Fecha inválida" };
+  }
+  const date = dateStr ? new Date(`${dateStr}T00:00:00.000Z`) : new Date();
+
   const meeting = await prisma.meeting.findFirst({
     where: { id: meetingId, tenantId, status: "DRAFT" },
     select: { id: true, number: true, type: true },
@@ -186,7 +233,7 @@ export async function finishMeeting(formData: FormData) {
 
   await prisma.meeting.update({
     where: { id: meetingId },
-    data: { status: "CLOSED", attendees },
+    data: { status: "CLOSED", attendees, date },
   });
 
   await audit({

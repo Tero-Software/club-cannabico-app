@@ -69,7 +69,7 @@ export function AccountMenu({
               key={item.href}
               href={item.href}
               role="menuitem"
-              className="flex items-center gap-2.5 h-8 px-3 text-sm text-[color-mix(in_oklab,var(--foreground)_62%,var(--muted-foreground))] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-colors"
+              className="flex items-center gap-2.5 h-9 px-3 text-sm text-[color-mix(in_oklab,var(--foreground)_62%,var(--muted-foreground))] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-colors"
             >
               {item.icon && (
                 <span className="text-current opacity-80 shrink-0">{item.icon}</span>
@@ -77,17 +77,16 @@ export function AccountMenu({
               <span className="truncate">{item.label}</span>
             </Link>
           ))}
-          {themeToggle && (
-            <>
-              <div className="my-1 h-px bg-[var(--border-subtle)]" />
-              <div className="flex items-center justify-between gap-2 h-8 px-3 text-sm text-[color-mix(in_oklab,var(--foreground)_62%,var(--muted-foreground))]">
-                <span>Tema</span>
-                {themeToggle}
-              </div>
-            </>
-          )}
           <div className="my-1 h-px bg-[var(--border-subtle)]" />
-          {onSignOut}
+          <div className="flex items-center justify-between gap-2">
+            {onSignOut}
+            {themeToggle && (
+              <>
+                <div className="w-px self-stretch -my-1 ml-auto bg-[var(--border-subtle)]" />
+                <span className="shrink-0 pl-1 pr-3">{themeToggle}</span>
+              </>
+            )}
+          </div>
         </div>
       )}
 

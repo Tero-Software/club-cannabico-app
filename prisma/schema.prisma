@@ -112,9 +112,22 @@ model Tenant {
   // siguiente. Ver enum CobroExcedente.
   cobroExcedente        CobroExcedente @default(PROPORCIONAL)
   maxActiveMembers      Int      @default(45)
-  // Cadencia de juntas de directiva: cada cuántos días se espera una junta.
-  // 1 mensual ≈ 30 días. Base para avisar juntas pendientes en el inicio.
-  meetingIntervalDays   Int      @default(30)
+  // Plazos de directiva, todos opcionales y por club (sin configurar = sin
+  // aviso), guardados como RRULE (RFC 5545) y consultados con la librería
+  // rrule. Cadencia de juntas: recurrencia mensual, ej. "el día 15 de cada
+  // mes" o "el 2.º martes de cada mes".
+  meetingRule           String?
+  // Cierre del ejercicio económico: recurrencia anual, ej.
+  // "RRULE:FREQ=YEARLY;BYMONTH=3;BYMONTHDAY=31". El período de las memorias y
+  // el aviso de cierre se derivan de acá.
+  fiscalYearEndRule     String?
+  // Fecha fijada para la próxima asamblea anual. Dispara el aviso hasta que se
+  // registre el acta (Meeting tipo ASAMBLEA) o se descarte.
+  nextAsambleaDate      DateTime?
+  // Mandato vigente de la comisión directiva: fecha de toma de posesión y
+  // duración en años. Con ambos se avisa el vencimiento del mandato.
+  mandateStart          DateTime?
+  mandateYears          Int?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
@@ -141,6 +154,7 @@ model Tenant {
   memorias          Memoria[]
   memoriaEntries    MemoriaEntry[]
   memoriaMilestones MemoriaMilestone[]
+  plannedHarvests   PlannedHarvest[]
 
   @@index([slug])
 }
@@ -335,6 +349,10 @@ model Harvest {
   date       DateTime    @map("fecha")
   declarada  Boolean     @default(false)
   notes      String?     @map("notas")
+  // Entrada del plan de cultivo a la que corresponde. Da el número y el año con
+  // los que se declara al IRCCA ("Cosecha N.º X del año"). Null = sin plan.
+  planId     String?     @map("planId")
+  plan       PlannedHarvest? @relation(fields: [planId], references: [id], onDelete: SetNull)
   containers Container[]
   plants     Plant[]
   createdAt  DateTime    @default(now())
@@ -342,7 +360,41 @@ model Harvest {
 
   @@index([tenantId])
   @@index([date])
+  @@index([planId])
   @@map("Cosecha")
+}
+
+// Plan de cultivo: las siembras que el club presenta al IRCCA, numeradas y con
+// los hitos aproximados del ciclo tal como figuran en el documento (sin año:
+// el plan se presenta una vez y en lo posible no se cambia). La ventana de
+// cosecha se guarda como RRULE anual por meses (FREQ=YEARLY;BYMONTH=...) para
+// derivar el aviso de "se viene la cosecha", igual que juntas y cierre de
+// ejercicio. La cosecha real (Harvest) se engancha a su siembra vía planId y
+// toma su número; el año sale de la fecha real.
+model PlannedHarvest {
+  id          String    @id @default(cuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  number      Int       @map("numero")
+  // Hitos aproximados del ciclo, como en el documento: mes y semanas del mes
+  // ("marzo, semanas 3 y 4"). Sin mes = hito sin definir.
+  germinationMonth Int?  @map("germinacionMes")
+  germinationWeeks Int[] @default([]) @map("germinacionSemanas")
+  pottingMonth     Int?  @map("macetaMes")
+  pottingWeeks     Int[] @default([]) @map("macetaSemanas")
+  bedMonth         Int?  @map("bancalMes")
+  bedWeeks         Int[] @default([]) @map("bancalSemanas")
+  // Ventana de cosecha estimada: RRULE anual con los meses (BYMONTHDAY=1).
+  harvestRule String    @map("cosechaRegla")
+  notes       String?   @map("notas")
+  harvests    Harvest[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Numeración única dentro del club: 1.ª siembra, 2.ª siembra…
+  @@unique([tenantId, number])
+  @@index([tenantId])
+  @@map("PlanCosecha")
 }
 
 model Container {

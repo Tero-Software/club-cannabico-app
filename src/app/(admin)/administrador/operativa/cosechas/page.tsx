@@ -19,6 +19,7 @@ export default async function CosechasPage() {
       where: { tenantId, declarada: false },
       orderBy: { date: "desc" },
       include: {
+        plan: { select: { number: true } },
         containers: {
           orderBy: { number: "asc" },
           include: {
@@ -41,6 +42,7 @@ export default async function CosechasPage() {
     id: h.id,
     date: h.date.toISOString(),
     declarada: h.declarada,
+    plan: h.plan,
     notes: h.notes,
     containers: h.containers.map((c) => ({
       id: c.id,
@@ -60,7 +62,7 @@ export default async function CosechasPage() {
         description="Carga de cosecha antes de declararla al acopio. Al declarar, sus contenedores pasan a acopio."
         action={
           <Link
-            href="/administrador/geneticas"
+            href="/administrador/operativa/geneticas"
             className="btn btn-secondary text-sm"
           >
             Agregar genética

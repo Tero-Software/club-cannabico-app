@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Sidebar, type SidebarSection, type SidebarItem } from "@/components/sidebar";
 import { AccountMenu, type AccountMenuItem } from "@/components/account-menu";
 import { can } from "@/lib/permissions";
+import { getAvisosClub } from "@/lib/avisos";
 
 type GatedItem = SidebarItem & { show: boolean };
 const visible = (items: GatedItem[]): SidebarItem[] =>
@@ -28,7 +29,7 @@ export default async function AdminLayout({
     if (fresh?.mustChangePassword) redirect("/cambiar-password");
   }
 
-  const [pendingRetiros, pendingPostulaciones, viewer, tenant] =
+  const [pendingRetiros, pendingPostulaciones, viewer, tenant, avisos] =
     await Promise.all([
       can(session, "retiros:manage")
         ? prisma.withdrawal.count({
@@ -48,7 +49,10 @@ export default async function AdminLayout({
         where: { id: session.user.tenantId },
         select: { name: true },
       }),
+      getAvisosClub(session.user.tenantId),
     ]);
+  // Secciones con aviso activo: llevan el punto rojo en el sidebar.
+  const conAviso = new Set(avisos.map((a) => a.href));
   const isOwner = !!viewer?.isOwner;
   // Arriba del sidebar va el nombre del club (la "app"), como Claude muestra el
   // nombre de la aplicación. El logo se conserva.
@@ -87,18 +91,21 @@ export default async function AdminLayout({
           href: "/administrador/directiva/comision",
           label: "Comisión",
           icon: <ComisionIcon />,
+          alert: conAviso.has("/administrador/directiva/comision"),
           show: true,
         },
         {
           href: "/administrador/directiva/juntas",
           label: "Juntas",
           icon: <JuntasIcon />,
+          alert: conAviso.has("/administrador/directiva/juntas"),
           show: true,
         },
         {
           href: "/administrador/directiva/asambleas",
           label: "Asambleas",
           icon: <AsambleasIcon />,
+          alert: conAviso.has("/administrador/directiva/asambleas"),
           show: true,
         },
         {
@@ -111,6 +118,7 @@ export default async function AdminLayout({
           href: "/administrador/directiva/memorias",
           label: "Memorias",
           icon: <MemoriasIcon />,
+          alert: conAviso.has("/administrador/directiva/memorias"),
           show: true,
         },
       ]),
@@ -118,6 +126,12 @@ export default async function AdminLayout({
     {
       title: "Operativa",
       items: visible([
+        {
+          href: "/administrador/operativa/plan",
+          label: "Plan de cultivo",
+          icon: <PlanCultivoIcon />,
+          show: true,
+        },
         {
           href: "/administrador/operativa/trazabilidad",
           label: "Trazabilidad",
@@ -136,20 +150,20 @@ export default async function AdminLayout({
           icon: <CosechasIcon />,
           show: true,
         },
+        {
+          href: "/administrador/operativa/geneticas",
+          label: "Genéticas",
+          icon: <GeneticasIcon />,
+          show: can(session, "geneticas:manage"),
+        },
       ]),
     },
   ];
 
   // Opciones de "Ajustes": ahora viven dentro del menú de cuenta (pie del
-  // sidebar), no como sección de navegación. Incluye "Editar genéticas".
+  // sidebar), no como sección de navegación.
   const accountItems: AccountMenuItem[] = (
     [
-      {
-        href: "/administrador/geneticas",
-        label: "Editar genéticas",
-        icon: <GeneticasIcon />,
-        show: can(session, "geneticas:manage"),
-      },
       {
         href: "/administrador/administradores",
         label: "Administradores",
@@ -351,6 +365,15 @@ function CosechasIcon() {
       <path d="M12 22v-8" />
       <path d="M12 14c-3 0-6-2-6-6 3 0 6 2 6 6z" />
       <path d="M12 11c0-3 2-6 6-6 0 3-2 6-6 6z" />
+    </svg>
+  );
+}
+
+function PlanCultivoIcon() {
+  return (
+    <svg {...iconProps}>
+      <rect x="3" y="4" width="18" height="17" rx="2" />
+      <path d="M8 2v4M16 2v4M3 9h18" />
     </svg>
   );
 }

@@ -49,30 +49,3 @@ Si no sé algo, propongo buscarlo.
 ## Acciones destructivas
 
 Nunca corro `rm`, `git clean`, `git reset --hard`, `DROP`, ni nada que borre. Si algo debe eliminarse, te pido permiso.
-
-
-# Rol de Santiago
-
-Santiago está a cargo de dos áreas de la empresa. Su trabajo sostiene la entrada de clientes y la salud financiera del negocio: sin captación no hay clubes nuevos, y sin facturación ordenada no hay empresa. Estas dos áreas son las que hacen que el producto llegue al mercado y se sostenga.
-
-**Ventas y Marketing:** rankear en Google, promocionar, captar y contactar potenciales clientes (los clubes).
-
-**Finanzas y Administración legal:** facturar, cobrar la suscripción, y las obligaciones ante DGI y BPS, apoyado en un contador externo.
-
-El trabajo abarca desde tareas de frontend (blog para rankear, diseño y estética de la landing) hasta tareas que no tocan código (mailing, contacto a clientes, facturación).
-
-
-# Índice de archivos
-
-Cada archivo cubre un frente. Leer el que corresponde a la tarea antes de empezar. No mezclar frentes en una misma respuesta salvo que la tarea lo pida.
-
-| Archivo | Cuándo leerlo |
-|---|---|
-| `contexto-producto.md` | Siempre que la tarea toque la app, sus funciones o a quién se le vende |
-| `contexto-legal-uy.md` | Marco legal cannábico UY, y cualquier tarea de finanzas o legal |
-| `seo-blog.md` | Rankear en Google, blog, contenido escrito |
-| `diseno.md` | Estética, landing, identidad visual |
-| `captacion-mailing.md` | Contacto a clientes, mailing, outreach |
-| `finanzas.md` | Facturar, cobrar suscripción, DGI, BPS, contador |
-
-Este archivo (`CLAUDE.md`) se aplica siempre: gobierna el lenguaje y el comportamiento. Santiago puede agregar reglas acá si lo cree necesario.

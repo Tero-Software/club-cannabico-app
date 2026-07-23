@@ -3,6 +3,9 @@ import { auth } from "@/lib/auth";
 import { can } from "@/lib/permissions";
 import { prisma } from "@/lib/db";
 import { PageHeader, EmptyState } from "@/components/ui/page-scaffold";
+import { AvisoBanner } from "@/components/aviso-banner";
+import { getAvisosClub, avisosFor } from "@/lib/avisos";
+import { harvestWindowLabel } from "@/lib/plan-cultivo";
 import { TrazabilidadPanel } from "./trazabilidad-panel";
 
 export const metadata = { title: "Trazabilidad (operativa)" };
@@ -13,7 +16,7 @@ export default async function TrazabilidadPage() {
 
   const tenantId = session!.user.tenantId;
 
-  const [harvestsRaw, strains] = await Promise.all([
+  const [harvestsRaw, strains, planEntries] = await Promise.all([
     prisma.harvest.findMany({
       where: { tenantId },
       orderBy: { date: "desc" },
@@ -21,6 +24,7 @@ export default async function TrazabilidadPage() {
         id: true,
         date: true,
         declarada: true,
+        plan: { select: { number: true } },
         plants: {
           // Las que no prosperaron van al final; dentro de cada grupo, por número.
           orderBy: [{ notProspered: "asc" }, { number: "asc" }],
@@ -33,12 +37,24 @@ export default async function TrazabilidadPage() {
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    prisma.plannedHarvest.findMany({
+      where: { tenantId },
+      orderBy: { number: "asc" },
+      select: { id: true, number: true, harvestRule: true },
+    }),
   ]);
+
+  // El motivo del aviso de esta sección (el punto rojo del sidebar).
+  const avisos = avisosFor(
+    await getAvisosClub(tenantId),
+    "/administrador/operativa/trazabilidad",
+  );
 
   const harvests = harvestsRaw.map((h) => ({
     id: h.id,
     date: h.date.toISOString(),
     declarada: h.declarada,
+    plan: h.plan,
     plants: h.plants.map((p) => ({
       id: p.id,
       number: p.number,
@@ -63,7 +79,17 @@ export default async function TrazabilidadPage() {
         description="Registro de trazabilidad del IRCCA: cada cosecha agrupa sus plantas, con las fechas de cada etapa del ciclo, el rendimiento y las observaciones."
       />
 
-      <TrazabilidadPanel harvests={harvests} strains={strains} />
+      <AvisoBanner messages={avisos} />
+
+      <TrazabilidadPanel
+        harvests={harvests}
+        strains={strains}
+        planEntries={planEntries.map((p) => ({
+          id: p.id,
+          number: p.number,
+          harvestLabel: harvestWindowLabel(p.harvestRule),
+        }))}
+      />
 
       {harvests.length === 0 && (
         <EmptyState

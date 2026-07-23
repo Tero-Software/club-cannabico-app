@@ -56,10 +56,16 @@ function fmtPeriod(startIso: string, endIso: string): string {
   return `${f.format(new Date(startIso))} al ${f.format(new Date(endIso))}`;
 }
 
-export function MemoriasPanel({ memorias }: { memorias: Memoria[] }) {
+export function MemoriasPanel({
+  memorias,
+  periodoHint,
+}: {
+  memorias: Memoria[];
+  periodoHint: string;
+}) {
   return (
     <div className="space-y-8">
-      <NewMemoria />
+      <NewMemoria periodoHint={periodoHint} />
 
       {memorias.length > 0 && (
         <div className="space-y-6">
@@ -72,7 +78,7 @@ export function MemoriasPanel({ memorias }: { memorias: Memoria[] }) {
   );
 }
 
-function NewMemoria() {
+function NewMemoria({ periodoHint }: { periodoHint: string }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -108,9 +114,7 @@ function NewMemoria() {
           className="input w-32"
           autoFocus
         />
-        <p className="text-xs text-[var(--muted-foreground)] mt-1">
-          Período 01/04 al 31/03 del año siguiente.
-        </p>
+        <p className="text-xs text-[var(--muted-foreground)] mt-1">{periodoHint}</p>
       </div>
       <SubmitWithSpinner className="btn btn-primary text-sm">
         Crear
@@ -167,7 +171,12 @@ function MemoriaCard({ memoria }: { memoria: Memoria }) {
           <h4 className="text-sm font-medium text-[var(--muted-foreground)]">
             Detalle mensual
           </h4>
-          {editable && <AddMilestone memoriaId={memoria.id} />}
+          {editable && (
+            <AddMilestone
+              memoriaId={memoria.id}
+              startMonth={new Date(memoria.periodStart).getUTCMonth() + 1}
+            />
+          )}
         </div>
         {visibleMonths.length > 0 ? (
           <div className="divide-y divide-[var(--border-subtle)]">
@@ -289,8 +298,18 @@ function MonthRow({
 }
 
 // Alta de hito a nivel memoria: se elige el mes y se cargan tema + desarrollo.
-// Los meses del ejercicio van en orden cronológico (abril → marzo).
-function AddMilestone({ memoriaId }: { memoriaId: string }) {
+// Los meses van en el orden cronológico del ejercicio (desde su mes de inicio).
+function AddMilestone({
+  memoriaId,
+  startMonth,
+}: {
+  memoriaId: string;
+  startMonth: number;
+}) {
+  const mesesEjercicio = Array.from(
+    { length: 12 },
+    (_, i) => ((startMonth - 1 + i) % 12) + 1,
+  );
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -321,8 +340,8 @@ function AddMilestone({ memoriaId }: { memoriaId: string }) {
     >
       <div>
         <label className="label">Mes</label>
-        <select name="month" className="input" defaultValue="4">
-          {[4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3].map((m) => (
+        <select name="month" className="input" defaultValue={String(startMonth)}>
+          {mesesEjercicio.map((m) => (
             <option key={m} value={m}>
               {MESES[m - 1]}
             </option>

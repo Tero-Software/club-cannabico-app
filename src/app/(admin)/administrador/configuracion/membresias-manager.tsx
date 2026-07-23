@@ -7,9 +7,9 @@ import {
   deletePlanAction,
   type PlanState,
 } from "./membresias-actions";
-import { setDefaultPlanAction, updateClubFieldAction, type DefaultPlanState } from "./actions";
+import { setDefaultPlanAction, updateClubFieldAction } from "./actions";
 import { SavingSpinner } from "@/components/ui/saving-spinner";
-import { PencilIcon } from "@/components/ui/icons";
+import { CheckIcon, PencilIcon } from "@/components/ui/icons";
 import { formatMoney } from "@/lib/billing";
 
 type Tier = { fromGrams: number; price: number };
@@ -40,12 +40,6 @@ export function MembresiasManager({
 
   return (
     <div className="space-y-6">
-      <DefaultPlanCard
-        plans={plans}
-        defaultPlanId={defaultPlanId}
-        cobroExcedente={cobroExcedente}
-      />
-
       {/* Planes: título + botón "Nuevo plan" como primera fila, y cada plan como
           fila, todo en una sola card dividida por líneas finitas. */}
       <div className="card p-0 [&>*+*]:border-t [&>*+*]:border-[var(--border-subtle)]">
@@ -82,31 +76,51 @@ export function MembresiasManager({
             Todavía no hay planes. Creá el primero para empezar a cobrar.
           </div>
         ) : (
-          plans.map((p) =>
-            editing === p.id ? (
-              <PlanForm
-                key={p.id}
-                mode="edit"
-                plan={p}
-                onDone={() => setEditing(null)}
-                onCancel={() => setEditing(null)}
-              />
-            ) : (
-              <PlanCard
-                key={p.id}
-                plan={p}
-                onEdit={() => setEditing(p.id)}
-                disabled={editing !== null}
-              />
-            ),
-          )
+          // Grilla compartida por todas las tarjetas: la columna del nombre es
+          // max-content, así el nombre más largo empareja dónde arranca el
+          // contenido (franjas) de todos los planes.
+          <div className="grid grid-cols-[max-content_1fr_auto] gap-x-6 [&>*+*]:border-t [&>*+*]:border-[var(--border-subtle)]">
+            {plans.map((p) =>
+              editing === p.id ? (
+                <div key={p.id} className="col-span-full">
+                  <PlanForm
+                    mode="edit"
+                    plan={p}
+                    onDone={() => setEditing(null)}
+                    onCancel={() => setEditing(null)}
+                  />
+                </div>
+              ) : (
+                <PlanCard
+                  key={p.id}
+                  plan={p}
+                  onEdit={() => setEditing(p.id)}
+                  disabled={editing !== null}
+                />
+              ),
+            )}
+          </div>
         )}
       </div>
+
+      <DefaultPlanCard
+        plans={plans}
+        defaultPlanId={defaultPlanId}
+        cobroExcedente={cobroExcedente}
+      />
     </div>
   );
 }
 
-/** Sección "Membresía por defecto": selector con autosave + botón "Nuevo plan". */
+const COBRO_OPTIONS = [
+  { value: "PROPORCIONAL", label: "Todo al precio por gramo de la franja alcanzada" },
+  {
+    value: "FRANJA_MAS_EXCEDENTE",
+    label: "La franja alcanzada + los gramos de más al precio unitario",
+  },
+];
+
+/** Sección "Membresía por defecto" y "Cobro entre franjas": valor fijo + lápiz. */
 function DefaultPlanCard({
   plans,
   defaultPlanId,
@@ -116,96 +130,162 @@ function DefaultPlanCard({
   defaultPlanId: string | null;
   cobroExcedente: "PROPORCIONAL" | "FRANJA_MAS_EXCEDENTE";
 }) {
-  const [state, action, pending] = useActionState<DefaultPlanState, FormData>(
-    setDefaultPlanAction,
-    null,
+  return (
+    <div className="card p-0 [&>*+*]:border-t [&>*+*]:border-[var(--border-subtle)]">
+      {plans.length > 0 && (
+        <OpcionesRow
+          label="Membresía por defecto"
+          hint="La que el club aplica a todo socio que no tenga una propia."
+          options={[
+            { value: "", label: "Sin membresía por defecto" },
+            ...plans.map((p) => ({ value: p.id, label: p.name })),
+          ]}
+          initialValue={defaultPlanId ?? ""}
+          onSave={async (v) => {
+            const fd = new FormData();
+            fd.set("planId", v);
+            const res = await setDefaultPlanAction(null, fd);
+            return res && "error" in res ? res.error : undefined;
+          }}
+        />
+      )}
+      <OpcionesRow
+        label="Cobro entre franjas"
+        hint="Cuando un socio pide una cantidad que supera una franja pero no llega a la siguiente (por ejemplo 23 g), ¿cómo lo cobrás?"
+        options={COBRO_OPTIONS}
+        initialValue={cobroExcedente}
+        onSave={async (v) => {
+          const fd = new FormData();
+          fd.set("field", "cobroExcedente");
+          fd.set("value", v);
+          const res = await updateClubFieldAction(null, fd);
+          return res && "error" in res ? res.error : undefined;
+        }}
+      />
+    </div>
   );
-  const [, startTransition] = useTransition();
-  const [value, setValue] = useState(defaultPlanId ?? "");
-  const [justSaved, setJustSaved] = useState(false);
-  const [modo, setModo] = useState(cobroExcedente);
+}
 
-  useEffect(() => {
-    if (state && "ok" in state && state.ok) {
-      setJustSaved(true);
-      const t = setTimeout(() => setJustSaved(false), 2500);
-      return () => clearTimeout(t);
-    }
-  }, [state]);
+/**
+ * Fila de una opción con valor fijo y lápiz: al editar se listan las opciones
+ * disponibles y la elegida se marca con un tilde.
+ */
+function OpcionesRow({
+  label,
+  hint,
+  options,
+  initialValue,
+  onSave,
+}: {
+  label: string;
+  hint?: string;
+  options: { value: string; label: string }[];
+  initialValue: string;
+  onSave: (value: string) => Promise<string | undefined>;
+}) {
+  const [value, setValue] = useState(initialValue);
+  const [draft, setDraft] = useState(initialValue);
+  const [editing, setEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
 
-  const error = state && "error" in state ? state.error : undefined;
+  const current = options.find((o) => o.value === value);
+
+  function open() {
+    setDraft(value);
+    setError(null);
+    setEditing(true);
+  }
+
+  function save() {
+    start(async () => {
+      setError(null);
+      const err = await onSave(draft);
+      if (err) {
+        setError(err);
+      } else {
+        setValue(draft);
+        setEditing(false);
+      }
+    });
+  }
 
   return (
-    <div style={{ padding: "1.5rem" }} className="card flex flex-col gap-4">
-      <div>
-        <h3 className="text-sm font-medium">Membresía por defecto</h3>
-        <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-          La que el club aplica a todo socio que no tenga una propia.
-        </p>
-      </div>
-
-      {plans.length > 0 && (
-        <div>
-          <select
-            id="default-plan"
-            name="planId"
-            className="input"
-            value={value}
-            onChange={(e) => {
-              const v = e.target.value;
-              setValue(v);
-              const fd = new FormData();
-              fd.set("planId", v);
-              startTransition(() => action(fd));
-            }}
-          >
-            <option value="">Sin membresía por defecto</option>
-            {plans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+    <div className="px-5 py-3">
+      {!editing ? (
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-medium">{label}</div>
+            {hint && (
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{hint}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-8 shrink-0 max-w-[60%]">
+            <span
+              className={`text-sm text-right ${
+                current ? "font-medium" : "text-[var(--fg-quaternary)] italic"
+              }`}
+            >
+              {current?.label ?? "Sin definir"}
+            </span>
+            <button
+              type="button"
+              aria-label={`Editar ${label}`}
+              onClick={open}
+              className="inline-flex items-center justify-center h-7 w-7 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-colors shrink-0"
+            >
+              <PencilIcon />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div>
+            <div className="text-sm font-medium">{label}</div>
+            {hint && (
+              <p className="text-xs text-[var(--muted-foreground)] mt-0.5">{hint}</p>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {options.map((o) => (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => setDraft(o.value)}
+                className={`flex items-center justify-between gap-3 px-3 py-2 rounded-md border text-sm text-left transition-colors ${
+                  draft === o.value
+                    ? "border-[var(--primary)] bg-[var(--muted)]"
+                    : "border-[var(--border)] hover:border-[var(--primary)] hover:bg-[var(--muted)]"
+                }`}
+              >
+                <span>{o.label}</span>
+                {draft === o.value && (
+                  <CheckIcon className="text-[var(--primary)] shrink-0" />
+                )}
+              </button>
             ))}
-          </select>
-          {error && <p className="text-sm text-[var(--destructive)] mt-1">{error}</p>}
+          </div>
+          {error && <p className="text-sm text-[var(--destructive)]">{error}</p>}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              className="btn btn-primary text-sm inline-flex items-center gap-2"
+            >
+              {pending && <SavingSpinner />}
+              Guardar
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              className="btn btn-ghost text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
-
-      {/* Cómo se cobra cuando el pedido cae entre dos franjas. */}
-      <div className="border-t border-[var(--border-subtle)] pt-4">
-        <div className="flex items-center gap-2 mb-0.5">
-          <h3 className="text-sm font-medium">Cobro entre franjas</h3>
-          {pending && <SavingSpinner />}
-          {justSaved && (
-            <span className="text-sm text-[var(--muted-foreground)]">Guardado</span>
-          )}
-        </div>
-        <p className="text-xs text-[var(--muted-foreground)] mb-2">
-          Cuando un socio pide una cantidad que supera una franja pero no llega a la
-          siguiente (por ejemplo 23 g), ¿cómo lo cobrás?
-        </p>
-        <select
-          id="cobro-excedente"
-          className="input"
-          value={modo}
-          onChange={(e) => {
-            const v = e.target.value as typeof modo;
-            setModo(v);
-            const fd = new FormData();
-            fd.set("field", "cobroExcedente");
-            fd.set("value", v);
-            startTransition(() => {
-              updateClubFieldAction(null, fd);
-            });
-          }}
-        >
-          <option value="PROPORCIONAL">
-            Todo al precio por gramo de la franja alcanzada
-          </option>
-          <option value="FRANJA_MAS_EXCEDENTE">
-            La franja alcanzada + los gramos de más al precio unitario
-          </option>
-        </select>
-      </div>
     </div>
   );
 }
@@ -230,41 +310,45 @@ function PlanCard({ plan, onEdit, disabled }: { plan: Plan; onEdit: () => void; 
   }
 
   return (
-    <div className={`px-5 py-4${plan.active ? "" : " opacity-60"}`}>
-      <div className="flex items-start justify-between flex-wrap gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-x-6 gap-y-1 flex-wrap">
-            <span className="font-medium">{plan.name}</span>
-            {!plan.active && <span className="badge badge-rechazado">Inactivo</span>}
-            {plan.tiers
-              .slice()
-              .sort((a, b) => a.fromGrams - b.fromGrams)
-              .map((t, i) => (
-                <span key={i} className="text-sm text-[var(--muted-foreground)]">
-                  {t.fromGrams} g → {formatMoney(t.price)}
-                </span>
-              ))}
-          </div>
-          {plan.membersCount > 0 && (
-            <div className="text-xs text-[var(--muted-foreground)] mt-2">
-              {plan.membersCount} socio{plan.membersCount === 1 ? "" : "s"} con esta membresía
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-5 shrink-0">
-          {plan.isDefault && <span className="badge badge-aprobado">Por defecto</span>}
-          <button
-            type="button"
-            aria-label={`Editar ${plan.name}`}
-            className="inline-flex items-center justify-center h-7 w-7 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-colors disabled:opacity-40"
-            onClick={onEdit}
-            disabled={disabled}
-          >
-            <PencilIcon />
-          </button>
-        </div>
+    // Fila de la grilla compartida (subgrid): nombre | franjas | acciones. La
+    // columna del nombre la dimensiona el más largo de la lista, así el
+    // contenido de todos los planes arranca a la misma altura.
+    <div
+      className={`col-span-full grid grid-cols-subgrid items-start px-5 py-4${plan.active ? "" : " opacity-60"}`}
+    >
+      <div className="flex items-center gap-x-3 min-w-0">
+        <span className="font-medium">{plan.name}</span>
+        {!plan.active && <span className="badge badge-rechazado">Inactivo</span>}
       </div>
-      {error && <p className="text-xs text-[var(--destructive)] mt-2">{error}</p>}
+      {/* Franjas: una por línea */}
+      <div className="flex flex-col gap-1 min-w-0">
+        {plan.tiers
+          .slice()
+          .sort((a, b) => a.fromGrams - b.fromGrams)
+          .map((t, i) => (
+            <span key={i} className="text-sm text-[var(--muted-foreground)]">
+              {t.fromGrams} g → {formatMoney(t.price)}
+            </span>
+          ))}
+      </div>
+      <div className="flex items-center justify-end gap-8 shrink-0">
+        {plan.isDefault && <span className="badge badge-aprobado">Por defecto</span>}
+        <button
+          type="button"
+          aria-label={`Editar ${plan.name}`}
+          className="inline-flex items-center justify-center h-7 w-7 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-2)] hover:text-[var(--foreground)] transition-colors disabled:opacity-40"
+          onClick={onEdit}
+          disabled={disabled}
+        >
+          <PencilIcon />
+        </button>
+      </div>
+      {plan.membersCount > 0 && (
+        <div className="col-span-full text-xs text-[var(--muted-foreground)] mt-2">
+          {plan.membersCount} socio{plan.membersCount === 1 ? "" : "s"} con esta membresía
+        </div>
+      )}
+      {error && <p className="col-span-full text-xs text-[var(--destructive)] mt-2">{error}</p>}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { updateProductoAction, deleteProductoAction } from "./actions";
 import { PhotosEditor } from "./photos-editor";
 import { ConfirmButton } from "@/components/ui/confirm-button";
@@ -30,7 +30,17 @@ export function GeneticaCard({
   formRef: (el: HTMLFormElement | null) => void;
 }) {
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [preview, setPreview] = useState(false);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!preview) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreview(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [preview]);
 
   if (editing) {
     return (
@@ -115,17 +125,24 @@ export function GeneticaCard({
 
   return (
     <div className="card">
-      <div className="grid sm:grid-cols-[220px_1fr] gap-4">
+      <div className="grid sm:grid-cols-[160px_1fr] gap-4">
         <div>
           <div className="relative aspect-square rounded-md overflow-hidden bg-[var(--muted)]">
             {current ? (
-              <Image
-                src={current}
-                alt={g.name}
-                fill
-                sizes="220px"
-                className="object-cover"
-              />
+              <button
+                type="button"
+                aria-label="Ver foto más grande"
+                onClick={() => setPreview(true)}
+                className="absolute inset-0 cursor-lupa transition-opacity hover:opacity-90"
+              >
+                <Image
+                  src={current}
+                  alt={g.name}
+                  fill
+                  sizes="160px"
+                  className="object-cover"
+                />
+              </button>
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-xs text-[var(--muted-foreground)]">
                 Sin foto
@@ -178,6 +195,29 @@ export function GeneticaCard({
           )}
         </div>
       </div>
+
+      {/* Preview de la foto a pantalla completa: se cierra tocando afuera o con Esc. */}
+      {preview && current && (
+        <div
+          role="dialog"
+          aria-label={`Foto de ${g.name}`}
+          onClick={() => setPreview(false)}
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-6"
+        >
+          <div
+            className="relative w-full max-w-3xl aspect-square"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Image
+              src={current}
+              alt={g.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-contain"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

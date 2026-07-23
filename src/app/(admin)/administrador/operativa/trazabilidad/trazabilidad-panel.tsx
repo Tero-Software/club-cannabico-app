@@ -13,6 +13,7 @@ import {
 } from "./actions";
 
 type Strain = { id: string; name: string };
+type PlanEntry = { id: string; number: number; harvestLabel: string };
 type Plant = {
   id: string;
   number: number;
@@ -32,6 +33,7 @@ type Harvest = {
   id: string;
   date: string;
   declarada: boolean;
+  plan: { number: number } | null;
   plants: Plant[];
 };
 
@@ -65,13 +67,15 @@ function fmtDateLong(iso: string): string {
 export function TrazabilidadPanel({
   harvests,
   strains,
+  planEntries,
 }: {
   harvests: Harvest[];
   strains: Strain[];
+  planEntries: PlanEntry[];
 }) {
   return (
     <div className="space-y-8">
-      <NewHarvest />
+      <NewHarvest planEntries={planEntries} />
 
       {harvests.map((h) => (
         <HarvestGroup key={h.id} harvest={h} strains={strains} />
@@ -96,8 +100,15 @@ function HarvestGroup({
           tabla se anclan justo debajo. */}
       <div className="sticky top-0 z-20 flex flex-wrap items-center gap-3 bg-[var(--surface-3)] px-3 h-16">
         <h2 className="text-base font-semibold text-[var(--foreground)]">
-          Cosecha del {fmtDateLong(harvest.date)}
+          {harvest.plan
+            ? `Cosecha N.º ${harvest.plan.number} — ${new Date(harvest.date).getFullYear()}`
+            : `Cosecha del ${fmtDateLong(harvest.date)}`}
         </h2>
+        {harvest.plan && (
+          <span className="text-xs text-[var(--muted-foreground)]">
+            inicio {fmtDate(harvest.date)}
+          </span>
+        )}
         <span className="rounded-full bg-[var(--surface-2)] px-2 py-0.5 text-xs text-[var(--muted-foreground)]">
           {harvest.declarada ? "Declarada" : "En preparación"}
         </span>
@@ -140,7 +151,7 @@ function HarvestGroup({
   );
 }
 
-function NewHarvest() {
+function NewHarvest({ planEntries }: { planEntries: PlanEntry[] }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -169,6 +180,19 @@ function NewHarvest() {
         <label className="label">Fecha de inicio</label>
         <input type="date" name="date" className="input" autoFocus />
       </div>
+      {planEntries.length > 0 && (
+        <div>
+          <label className="label">Siembra del plan</label>
+          <select name="planId" className="input">
+            <option value="">Sin plan</option>
+            {planEntries.map((p) => (
+              <option key={p.id} value={p.id}>
+                Siembra N.º {p.number} — cosecha {p.harvestLabel.toLowerCase()}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="flex-1 min-w-[10rem]">
         <label className="label">Observaciones</label>
         <input

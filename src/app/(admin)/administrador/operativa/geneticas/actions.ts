@@ -86,7 +86,7 @@ export async function createProductoAction(
     metadata: { name: created.name },
   });
 
-  revalidatePath("/administrador/geneticas");
+  revalidatePath("/administrador/operativa/geneticas");
   return { ok: true };
 }
 
@@ -147,7 +147,7 @@ export async function updateProductoAction(formData: FormData) {
     metadata: { name: before.name, changes },
   });
 
-  revalidatePath("/administrador/geneticas");
+  revalidatePath("/administrador/operativa/geneticas");
 }
 
 export async function deleteProductoAction(
@@ -180,5 +180,5 @@ export async function deleteProductoAction(
     entity: "Genetica",
     entityId: id,
   });
-  revalidatePath("/administrador/geneticas");
+  revalidatePath("/administrador/operativa/geneticas");
 }

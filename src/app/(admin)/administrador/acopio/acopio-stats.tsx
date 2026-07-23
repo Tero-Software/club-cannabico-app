@@ -92,7 +92,7 @@ export function AcopioStats({
                   {formatGramos(g.disponible)}
                 </span>
                 <Link
-                  href={`/administrador/geneticas?editar=${g.id}`}
+                  href={`/administrador/operativa/geneticas?editar=${g.id}`}
                   aria-label={`Editar ${g.name}`}
                   className="inline-flex items-center justify-center h-7 w-7 rounded-md text-[var(--muted-foreground)] hover:bg-[var(--surface-3)] hover:text-[var(--foreground)] transition-colors shrink-0"
                 >

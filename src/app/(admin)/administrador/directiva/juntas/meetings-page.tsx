@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getAvisosClub, avisosFor } from "@/lib/avisos";
+import { AvisoBanner } from "@/components/aviso-banner";
 import { PageHeader, EmptyState } from "@/components/ui/page-scaffold";
 import { buildActa, type Acta } from "./acta";
 import { ActaView, tituloActa } from "./acta-view";
@@ -53,9 +55,17 @@ export async function MeetingsPage({
       })
     : [];
 
+  // Motivo del aviso de esta sección (el punto rojo del sidebar).
+  const href =
+    type === "DIRECTIVA"
+      ? "/administrador/directiva/juntas"
+      : "/administrador/directiva/asambleas";
+  const avisos = avisosFor(await getAvisosClub(tenantId), href);
+
   return (
     <div className="space-y-8">
       <PageHeader title={title} description={description} />
+      <AvisoBanner messages={avisos} />
 
       <JuntasPanel
         type={type}

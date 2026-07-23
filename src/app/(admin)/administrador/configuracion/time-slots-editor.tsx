@@ -19,8 +19,16 @@ const MINUTES = Array.from({ length: 60 / MINUTE_STEP }, (_, i) => {
 });
 
 const WHEEL_WIDTH = 90;
-const ITEM_HEIGHT = 125;
+// Alto de cada celda. Toda la geometría de la rueda escala con este valor:
+// más chico = items más pegados y rueda más compacta.
+const ITEM_HEIGHT = 90;
 const VISIBLE_COUNT = 4;
+
+// Velocidad del giro. La animación de un paso dura √(1/scrollSensitivity) s
+// (default 5 ≈ 0.45 s; con 1 ≈ 1 s) y la inercia del arrastre desacelera a
+// dragSensitivity × 10 items/s² (default 3; con 1 frena 3 veces más suave).
+const DRAG_SENSITIVITY = 2;
+const SCROLL_SENSITIVITY = 6;
 
 /** Rueda de 24 hs: dos ruedas (hora y minuto) que devuelven "HH:MM". */
 function TimeWheel({
@@ -46,6 +54,8 @@ function TimeWheel({
           infinite
           visibleCount={VISIBLE_COUNT}
           optionItemHeight={ITEM_HEIGHT}
+          dragSensitivity={DRAG_SENSITIVITY}
+          scrollSensitivity={SCROLL_SENSITIVITY}
           classNames={wheelClassNames}
         />
         <WheelPicker
@@ -55,6 +65,8 @@ function TimeWheel({
           infinite
           visibleCount={VISIBLE_COUNT}
           optionItemHeight={ITEM_HEIGHT}
+          dragSensitivity={DRAG_SENSITIVITY}
+          scrollSensitivity={SCROLL_SENSITIVITY}
           classNames={wheelClassNames}
         />
       </WheelPickerWrapper>
@@ -254,7 +266,7 @@ function SlotEditor({
             <TimeWheel value={end} onChange={onEnd} />
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex justify-end gap-2">
           {onRemove && (
             <button
               type="button"

@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getAvisosClub, avisosFor } from "@/lib/avisos";
+import { buildRule, periodForYear } from "@/lib/ejercicio";
+import { AvisoBanner } from "@/components/aviso-banner";
 import { PageHeader, EmptyState } from "@/components/ui/page-scaffold";
 import { MemoriasPanel } from "./memorias-panel";
 
@@ -13,7 +16,7 @@ export default async function MemoriasPage() {
 
   const tenantId = session.user.tenantId;
 
-  const [memoriasRaw, members] = await Promise.all([
+  const [memoriasRaw, members, tenant] = await Promise.all([
     prisma.memoria.findMany({
       where: { tenantId },
       orderBy: { year: "desc" },
@@ -29,10 +32,23 @@ export default async function MemoriasPage() {
       where: { tenantId, role: "MEMBER" },
       select: { name: true, createdAt: true, deactivatedAt: true },
     }),
+    prisma.tenant.findUniqueOrThrow({
+      where: { id: tenantId },
+      select: { fiscalYearEndRule: true },
+    }),
   ]);
 
-  // El ejercicio arranca en abril: se ordena abril→marzo (4..12, 1..3).
-  const cronOrder = (month: number) => (month >= 4 ? month - 4 : month + 8);
+  // Hint del formulario de alta: el período que tendría una memoria creada
+  // ahora, según el cierre configurado del club. Solo informativo; el período
+  // real se guarda en cada memoria al crearla.
+  const rule = buildRule(tenant.fiscalYearEndRule);
+  const period = rule ? periodForYear(rule, new Date().getUTCFullYear()) : null;
+  const dm = (d: Date) =>
+    `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  const periodoHint = period
+    ? `Período ${dm(period.start)} al ${dm(period.end)}${period.end.getUTCFullYear() > period.start.getUTCFullYear() ? " del año siguiente" : ""}.`
+    : "Definí el cierre del ejercicio en Configuración.";
+
   const ym = (d: Date) => ({ y: d.getUTCFullYear(), m: d.getUTCMonth() + 1 });
 
   // Hito calculado de movimiento de socios de un mes (año+mes), derivado de los
@@ -66,14 +82,21 @@ export default async function MemoriasPage() {
   }
 
   const memorias = memoriasRaw.map((m) => {
-    // Año calendario de cada mes del ejercicio: abril–diciembre = año del
-    // ejercicio; enero–marzo = año siguiente.
-    const calYear = (month: number) => (month >= 4 ? m.year : m.year + 1);
+    // El ejercicio arranca en el mes de periodStart (depende del cierre
+    // configurado al crear la memoria). De ahí salen el orden de los meses y
+    // el año calendario de cada uno: desde el mes de inicio = año del
+    // ejercicio; los anteriores = año siguiente.
+    const startMonth = m.periodStart.getUTCMonth() + 1;
+    const calYear = (month: number) => (month >= startMonth ? m.year : m.year + 1);
+    const mesesEjercicio = Array.from(
+      { length: 12 },
+      (_, i) => ((startMonth - 1 + i) % 12) + 1,
+    );
     const byMonth = new Map(m.entries.map((e) => [e.month, e]));
 
     // Cada mes lista sus hitos: primero el de movimiento de socios (calculado),
     // luego los eventos cargados. Los eventos llevan `derived: false`.
-    const months = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3].map((month) => {
+    const months = mesesEjercicio.map((month) => {
       const e = byMonth.get(month);
       const mov = movementMilestone(calYear(month), month);
       const events = (e?.milestones ?? []).map((h) => ({
@@ -96,18 +119,24 @@ export default async function MemoriasPage() {
       periodEnd: m.periodEnd.toISOString(),
       summary: m.summary,
       status: m.status,
-      entries: months.sort((a, b) => cronOrder(a.month) - cronOrder(b.month)),
+      entries: months,
     };
   });
+
+  const avisos = avisosFor(
+    await getAvisosClub(tenantId),
+    "/administrador/directiva/memorias",
+  );
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Memorias"
-        description="Memorias anuales del club, ejercicio por ejercicio (01/04 al 31/03). Resumen del período y detalle mensual de hitos, altas y bajas de socios."
+        description="Memorias anuales del club, ejercicio por ejercicio. Resumen del período y detalle mensual de hitos, altas y bajas de socios."
       />
+      <AvisoBanner messages={avisos} />
 
-      <MemoriasPanel memorias={memorias} />
+      <MemoriasPanel memorias={memorias} periodoHint={periodoHint} />
 
       {memorias.length === 0 && (
         <EmptyState

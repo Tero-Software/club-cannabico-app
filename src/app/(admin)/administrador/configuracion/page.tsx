@@ -56,6 +56,11 @@ export default async function ConfiguracionPage() {
           minGramsPerWithdrawal: row.minGramsPerWithdrawal,
           minGramsPerStrain: row.minGramsPerStrain,
           gramsStep: row.gramsStep,
+          meetingRule: row.meetingRule,
+          fiscalYearEndRule: row.fiscalYearEndRule,
+          nextAsambleaDate: row.nextAsambleaDate?.toISOString().slice(0, 10) ?? null,
+          mandateStart: row.mandateStart?.toISOString().slice(0, 10) ?? null,
+          mandateYears: row.mandateYears,
         }}
       />
 

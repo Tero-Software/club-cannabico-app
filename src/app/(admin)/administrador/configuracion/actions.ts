@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { rrulestr } from "rrule";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -83,9 +84,41 @@ export async function updateClubConfigAction(
     data: parsed.data,
   });
 
+  await audit({
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "config.update",
+    entity: "Tenant",
+    entityId: session.user.tenantId,
+    metadata: { fields: Object.keys(parsed.data) },
+  });
+
   invalidateClubConfig(session.user.tenantId);
   return { ok: true };
 }
+
+// Recurrencia RRULE opcional (juntas, cierre de ejercicio); la valida la
+// librería rrule. Cadena vacía -> null.
+const optionalRRule = z
+  .string()
+  .trim()
+  .refine((v) => {
+    if (v === "") return true;
+    try {
+      rrulestr(v);
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Recurrencia inválida")
+  .transform((v) => (v === "" ? null : v));
+
+// Fecha opcional de un <input type="date">: cadena vacía -> null.
+const optionalDate = z
+  .string()
+  .trim()
+  .refine((v) => v === "" || /^\d{4}-\d{2}-\d{2}$/.test(v), "Fecha inválida")
+  .transform((v) => (v === "" ? null : new Date(`${v}T00:00:00.000Z`)));
 
 // Actualización parcial de un solo parámetro del club. La edición de
 // configuración es campo por campo (cada uno con su lápiz y su guardar), así que
@@ -101,6 +134,12 @@ const partialSchemas = {
   minGramsPerStrain: schema.shape.minGramsPerStrain,
   gramsStep: schema.shape.gramsStep,
   cobroExcedente: z.enum(["PROPORCIONAL", "FRANJA_MAS_EXCEDENTE"]),
+  // Plazos de directiva: disparan los avisos del sidebar. Todos opcionales.
+  meetingRule: optionalRRule,
+  fiscalYearEndRule: optionalRRule,
+  nextAsambleaDate: optionalDate,
+  mandateStart: optionalDate,
+  mandateYears: z.number().int().min(1, "Mínimo 1 año").max(99, "Máximo 99 años").nullable(),
 } as const;
 
 type ConfigField = keyof typeof partialSchemas;
@@ -137,6 +176,10 @@ export async function updateClubFieldAction(
     field === "gramsStep"
   ) {
     raw = Number(fd.get("value"));
+  } else if (field === "mandateYears") {
+    // Numérico opcional: vacío -> null (apaga el aviso de mandato).
+    const s = String(fd.get("value") ?? "").trim();
+    raw = s === "" ? null : Number(s);
   } else {
     raw = String(fd.get("value") ?? "");
   }
@@ -172,6 +215,15 @@ export async function updateClubFieldAction(
   await prisma.tenant.update({
     where: { id: tenantId },
     data: { [field]: parsed.data },
+  });
+
+  await audit({
+    userId: session.user.id,
+    actorEmail: session.user.email,
+    action: "config.update",
+    entity: "Tenant",
+    entityId: tenantId,
+    metadata: { field, value: parsed.data },
   });
 
   invalidateClubConfig(tenantId);
